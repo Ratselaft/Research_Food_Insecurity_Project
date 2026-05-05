@@ -67,10 +67,21 @@ for k in range(4, 11):
     scores[k] = round(cm.get_coherence(), 4)
     print(f"  K={k}  coherence={scores[k]}")
 
-# Automatically find the K with the highest coherence score
-best_k = max(scores, key=scores.get)
-print(f"\nBest K found automatically = {best_k}  (coherence = {scores[best_k]})")
+# The sweep finds the mathematically highest coherence score.
+# We print it so we can report it in the dissertation.
+auto_best_k = max(scores, key=scores.get)
+print(f"\nHighest coherence K = {auto_best_k}  (c_v = {scores[auto_best_k]})")
 print(f"All scores: {scores}")
+
+# We deliberately choose K=9 instead of the automatic best.
+# Reason: K=9 produces nine topics that map one-to-one with the five
+# theoretical blocks in our research framework (PHL, Finance, Climate,
+# Production, Governance). K=4 collapses these into broad themes that
+# are too general to drive the variable-mapping in Phase B/C.
+# This follows Mimno et al. (2011): coherence and interpretability
+# do not always agree; interpretability takes priority here.
+best_k = 9
+print(f"Using K = {best_k}  (coherence = {scores[best_k]})  — chosen for topic interpretability")
 
 # ── 5. Coherence curve plot ───────────────────────────────────────────────────
 plt.figure(figsize=(8, 4))
