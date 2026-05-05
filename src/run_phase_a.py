@@ -67,8 +67,10 @@ for k in range(4, 11):
     scores[k] = round(cm.get_coherence(), 4)
     print(f"  K={k}  coherence={scores[k]}")
 
-best_k = 9  # manually set — K=9 gives more granular topics aligned with project themes
-print(f"\nUsing K = {best_k}  (coherence = {scores[best_k]})")
+# Automatically find the K with the highest coherence score
+best_k = max(scores, key=scores.get)
+print(f"\nBest K found automatically = {best_k}  (coherence = {scores[best_k]})")
+print(f"All scores: {scores}")
 
 # ── 5. Coherence curve plot ───────────────────────────────────────────────────
 plt.figure(figsize=(8, 4))
