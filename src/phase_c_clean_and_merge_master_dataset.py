@@ -27,14 +27,13 @@
 # data for each model specification.
 # ============================================================
 
-# I need pandas to work with tables of data
-import pandas as pd
+# I need os to create folders and check whether files exist
+import os
 
 # I need numpy for maths (log, divide, etc.)
 import numpy as np
-
-# I need os to create folders and check whether files exist
-import os
+# I need pandas to work with tables of data
+import pandas as pd
 
 # I make sure my output folder exists
 os.makedirs("data/processed", exist_ok=True)

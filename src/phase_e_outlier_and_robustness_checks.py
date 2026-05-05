@@ -29,36 +29,31 @@
 
 # I suppress warning messages to keep the output tidy
 import warnings
-warnings.filterwarnings('ignore')
 
-# I need requests to download data from the internet
-import requests
+warnings.filterwarnings('ignore')
 
 # I need os to create folders
 import os
 
-# I need numpy for mathematical operations
-import numpy as np
-
-# I need pandas to work with tables
-import pandas as pd
-
 # I need matplotlib to draw charts
 import matplotlib
+# I need numpy for mathematical operations
+import numpy as np
+# I need pandas to work with tables
+import pandas as pd
+# I need requests to download data from the internet
+import requests
+
 matplotlib.use('Agg')   # I save charts to files, so I don't need a screen
 import matplotlib.pyplot as plt
-
 # I need statsmodels for OLS regression
 import statsmodels.api as sm
-
-# OLSInfluence lets me compute Cook's Distance
-from statsmodels.stats.outliers_influence import OLSInfluence
-
 # IsolationForest is the machine learning outlier detector
 from sklearn.ensemble import IsolationForest
-
 # StandardScaler normalises all my variables to the same scale
 from sklearn.preprocessing import StandardScaler
+# OLSInfluence lets me compute Cook's Distance
+from statsmodels.stats.outliers_influence import OLSInfluence
 
 # I make sure my output folders exist before I try to save anything
 os.makedirs("outputs/tables",  exist_ok=True)

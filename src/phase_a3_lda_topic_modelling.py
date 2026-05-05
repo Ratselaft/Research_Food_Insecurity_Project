@@ -16,13 +16,13 @@
 # I need random and numpy to control randomness
 # Setting a seed means I get the same results every time I run this
 import random
-import numpy as np
-
 # I need re to clean up text using pattern matching
 import re
-
 # I need warnings to suppress any annoying warning messages
 import warnings
+
+import numpy as np
+
 warnings.filterwarnings('ignore')
 
 # I set a fixed random seed so my results don't change between runs
@@ -30,28 +30,22 @@ RANDOM_SEED = 42
 random.seed(RANDOM_SEED)
 np.random.seed(RANDOM_SEED)
 
-# I need pandas to load and work with my corpus table
-import pandas as pd
-
+# I need gensim tools to build the dictionary and corpus for LDA
+import gensim.corpora as corpora
+# I need matplotlib to draw charts
+import matplotlib
 # I need nltk for natural language processing tools
 import nltk
-
+# I need pandas to load and work with my corpus table
+import pandas as pd
+# I need the LDA model and coherence model from gensim
+from gensim.models import CoherenceModel, LdaModel
 # I need the stopwords list — common English words like "the", "a", "is"
 from nltk.corpus import stopwords
-
 # I need WordNetLemmatizer to reduce words to their base form
 # e.g. "running" → "run", "studies" → "study"
 from nltk.stem import WordNetLemmatizer
 
-# I need gensim tools to build the dictionary and corpus for LDA
-import gensim.corpora as corpora
-
-# I need the LDA model and coherence model from gensim
-from gensim.models import LdaModel
-from gensim.models import CoherenceModel
-
-# I need matplotlib to draw charts
-import matplotlib
 matplotlib.use('Agg')  # I use 'Agg' so charts save to files without needing a screen
 import matplotlib.pyplot as plt
 

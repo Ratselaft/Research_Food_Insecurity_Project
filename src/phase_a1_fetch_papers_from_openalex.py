@@ -33,18 +33,15 @@
 #   journal, year, doi, source (which database it came from)
 # ============================================================
 
+# I need os to check whether files exist
+import os
 # I need time to pause between API requests (polite to the server)
 import time
 
-# I need requests to send web requests to the OpenAlex API
-import requests
-
 # I need pandas to work with tables of data
 import pandas as pd
-
-# I need os to check whether files exist
-import os
-
+# I need requests to send web requests to the OpenAlex API
+import requests
 
 # ============================================================
 # Part 1: I'm fetching papers from OpenAlex (automatic)

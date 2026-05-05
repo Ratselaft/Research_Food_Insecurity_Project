@@ -20,12 +20,10 @@
 # I need os to look through folders and check file paths
 import os
 
-# I need pdfplumber to open PDF files and pull out the text
-import pdfplumber
-
 # I need pandas to work with my CSV corpus table
 import pandas as pd
-
+# I need pdfplumber to open PDF files and pull out the text
+import pdfplumber
 
 # ── I'm setting the folder where my PDFs are saved ────────────────────────────
 PDF_FOLDER = "/Users/productguru/Documents/Research Project Repo"

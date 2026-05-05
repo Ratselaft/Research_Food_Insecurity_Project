@@ -62,43 +62,37 @@
 
 # I suppress warning messages to keep the output readable
 import warnings
-warnings.filterwarnings("ignore")
 
-# I need requests to download the dependent variable from the internet
-import requests
+warnings.filterwarnings("ignore")
 
 # I need time to pause between downloads
 import time
 
-# I need numpy for mathematical operations
-import numpy as np
-
-# I need pandas for working with tables
-import pandas as pd
-
 # I need matplotlib to draw charts
 import matplotlib
+# I need numpy for mathematical operations
+import numpy as np
+# I need pandas for working with tables
+import pandas as pd
+# I need requests to download the dependent variable from the internet
+import requests
+
 matplotlib.use("Agg")   # I save charts to files rather than displaying on screen
-import matplotlib.pyplot as plt
-
-# I need these from sklearn for machine learning
-from sklearn.ensemble        import RandomForestRegressor
-from sklearn.model_selection import cross_val_score
-from sklearn.model_selection import KFold
-from sklearn.preprocessing   import StandardScaler
-from sklearn.metrics         import r2_score
-
-# I need statsmodels for OLS regression (it gives me proper p-values)
-import statsmodels.api as sm
-
-# I need xgboost for the boosted tree model
-import xgboost as xgb
-
-# I need shap to explain which variables drive the predictions
-import shap
-
 # I need os to create output folders
 import os
+
+import matplotlib.pyplot as plt
+# I need shap to explain which variables drive the predictions
+import shap
+# I need statsmodels for OLS regression (it gives me proper p-values)
+import statsmodels.api as sm
+# I need xgboost for the boosted tree model
+import xgboost as xgb
+# I need these from sklearn for machine learning
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import r2_score
+from sklearn.model_selection import KFold, cross_val_score
+from sklearn.preprocessing import StandardScaler
 
 # I make sure my output folders exist
 os.makedirs("outputs/tables",  exist_ok=True)

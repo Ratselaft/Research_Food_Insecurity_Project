@@ -32,17 +32,15 @@
 #   - FAO Food Loss data is most complete around 2021
 # ============================================================
 
-# I need requests to download files from the internet
-import requests
+# I need os to check folders and file paths
+import os
+# I need time to pause between downloads (polite to the servers!)
+import time
 
 # I need pandas to work with tables of data
 import pandas as pd
-
-# I need os to check folders and file paths
-import os
-
-# I need time to pause between downloads (polite to the servers!)
-import time
+# I need requests to download files from the internet
+import requests
 
 # I make sure my output folders exist before saving anything
 os.makedirs("data/raw", exist_ok=True)

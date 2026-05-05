@@ -28,19 +28,17 @@
 # I need os to create folders and work with file paths
 import os
 
+# I need matplotlib to draw all my charts
+import matplotlib
 # I need numpy for mathematical operations like array of x positions
 import numpy as np
-
 # I need pandas to work with tables of data
 import pandas as pd
 
-# I need matplotlib to draw all my charts
-import matplotlib
 matplotlib.use('Agg')   # I save charts to files — no screen needed
-import matplotlib.pyplot as plt
-
 # I need patches to draw my legend boxes on the heatmap
 import matplotlib.patches as mpatches
+import matplotlib.pyplot as plt
 
 # I make sure my output folders exist
 os.makedirs("outputs/tables",    exist_ok=True)
