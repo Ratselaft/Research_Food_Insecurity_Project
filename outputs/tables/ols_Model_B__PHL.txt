@@ -1,0 +1,32 @@
+                             OLS Regression Results                             
+================================================================================
+Dep. Variable:     undernourishment_pct   R-squared:                       0.613
+Model:                              OLS   Adj. R-squared:                  0.572
+Method:                   Least Squares   F-statistic:                     15.02
+Date:                  Tue, 05 May 2026   Prob (F-statistic):           3.22e-10
+Time:                          03:18:26   Log-Likelihood:                -221.55
+No. Observations:                    64   AIC:                             457.1
+Df Residuals:                        57   BIC:                             472.2
+Df Model:                             6                                         
+Covariance Type:              nonrobust                                         
+==========================================================================================
+                             coef    std err          t      P>|t|      [0.025      0.975]
+------------------------------------------------------------------------------------------
+const                     48.2392     17.603      2.740      0.008      12.990      83.488
+cereal_yield_kg_per_ha    -4.3786      2.655     -1.649      0.105      -9.694       0.937
+fertiliser_kg_per_ha      -0.0496      1.300     -0.038      0.970      -2.653       2.554
+arable_land_pct           -0.0548      0.081     -0.680      0.499      -0.216       0.107
+gdp_per_capita_usd         1.9439      1.852      1.050      0.298      -1.765       5.653
+internet_users_pct        -0.3192      0.087     -3.662      0.001      -0.494      -0.145
+cereal_loss_pct            0.5049      0.230      2.198      0.032       0.045       0.965
+==============================================================================
+Omnibus:                        5.090   Durbin-Watson:                   2.010
+Prob(Omnibus):                  0.078   Jarque-Bera (JB):                4.470
+Skew:                           0.435   Prob(JB):                        0.107
+Kurtosis:                       3.959   Cond. No.                     1.12e+03
+==============================================================================
+
+Notes:
+[1] Standard Errors assume that the covariance matrix of the errors is correctly specified.
+[2] The condition number is large, 1.12e+03. This might indicate that there are
+strong multicollinearity or other numerical problems.

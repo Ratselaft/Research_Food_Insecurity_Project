@@ -8,6 +8,9 @@
 #   one row per country — ready for modelling in Phase D.
 #
 # What has changed in this improved version:
+#   - I now use the APHLIS + FAO FBS combined PHL dataset
+#     (real country-level post-harvest loss for 159 countries)
+#     instead of the old FAO FLW platform data (regional proxies)
 #   - I now merge ALL the new WDI indicators (rural population,
 #     agricultural employment, female agriculture, food price
 #     inflation, livestock production, credit rights)
@@ -15,8 +18,11 @@
 #     female, poorest 40%, agricultural payments, borrowing)
 #   - I now merge ALL 6 WGI governance indicators
 #     (or skip gracefully if the manual file is not ready)
-#   - I now try to extract supply chain stage from the FAO FLW
-#     data (so I know WHERE in the chain losses happen)
+#   - I now merge the Logistics Performance Index (LPI) —
+#     an NLP-discovered variable for value chain / market access
+#   - I now merge rural poverty headcount (NLP smallholder theme)
+#   - I now merge mobile / internet access (NLP financial access
+#     in rural context)
 #   - I now compute a VALUE CHAIN FINANCIAL ACCESS score —
 #     a single composite number that captures whether finance
 #     is reaching people in the food production chain
@@ -71,169 +77,44 @@ REGIONAL_CODES.add("XZN")
 
 
 # ============================================================
-# Step 1: I'm cleaning the FAO Food Loss and Waste data
+# Step 1: I'm loading the Post-Harvest Loss combined dataset
 # ============================================================
-# The raw FLW file has thousands of rows covering many commodities
-# and (if available) multiple supply chain stages.
+# scripts/mine_additional_data.py built phl_combined.csv by layering
+# three data sources in priority order:
 #
-# I need to:
-#   a) Keep only cereal crops
-#   b) Try to capture supply chain stage information
-#   c) Calculate average loss per country (and per stage if possible)
-#   d) Produce one number per country: average % cereal loss
+#   Layer A1 (highest quality): 39 African countries from APHLIS.
+#     APHLIS uses validated crop-system models — not accounting residuals.
+#
+#   Layer A2: FAO Food Balance Sheets (real country-level data).
+#     Element Code 5123 (Losses) / Element Code 5301 (Domestic supply)
+#     gives a real cereal loss percentage for 120+ additional countries.
+#
+#   Layer C: sub-regional proxies for the remaining countries
+#     (9 unique values rather than the original 4 continental averages).
+#
+# The phl_combined.csv already has country_code and cereal_loss_pct
+# columns — no name matching or cleaning is needed here.
 
-print("\n[1/7] Cleaning FAO Food Loss and Waste data...")
+print("\n[1/7] Loading Post-Harvest Loss data (APHLIS + FAO Food Balance Sheets)...")
 
-# I set the path — I try both possible filename versions
-FLW_FILE = "data/raw/fao_flw_losses.csv.csv"
-if not os.path.exists(FLW_FILE):
-    FLW_FILE = "data/raw/fao_flw_losses.csv"
-
-# I read the file
-flw_raw = pd.read_csv(FLW_FILE)
-
-# I check if the file has real data or is just a placeholder
-if len(flw_raw) == 0:
-    print("  FLW file is a placeholder — no real data yet")
-    print("  Download the file manually from:")
-    print("  https://www.fao.org/platform-food-loss-waste/flw-data/en/")
-    # I create empty tables that Phase D can handle gracefully
-    flw_country = pd.DataFrame(columns=["country_code", "cereal_loss_pct"])
-    flw_by_stage = pd.DataFrame(columns=["country_code", "farm_loss_pct",
-                                         "storage_loss_pct", "market_loss_pct"])
+PHL_FILE = "data/raw/phl_combined.csv"
+if os.path.exists(PHL_FILE):
+    phl_raw = pd.read_csv(PHL_FILE)
+    flw_country = phl_raw[["country_code", "cereal_loss_pct"]].dropna(
+        subset=["country_code", "cereal_loss_pct"]
+    ).copy()
+    if "phl_quality" in phl_raw.columns:
+        n_real = phl_raw["phl_quality"].str.startswith("A").sum()
+        print(f"  Loaded {len(flw_country)} countries with PHL data")
+        print(f"  Real country-level data (Quality A): {n_real} countries")
+    else:
+        print(f"  Loaded {len(flw_country)} countries with PHL data")
 else:
-    print("  Raw FLW rows:", len(flw_raw))
-    print("  Countries in file:", flw_raw["country"].nunique() if "country" in flw_raw.columns else "unknown")
+    print("  phl_combined.csv not found — run scripts/mine_additional_data.py first")
+    flw_country = pd.DataFrame(columns=["country_code", "cereal_loss_pct"])
 
-    # I look for a supply chain stage column in the file
-    stage_col = None
-    for col in flw_raw.columns:
-        if "stage" in col.lower() or "chain" in col.lower():
-            stage_col = col
-            print("  Found supply chain stage column:", stage_col)
-            break
-
-    # I keep only cereal crops
-    CEREAL_WORDS = ["wheat", "maize", "corn", "rice", "sorghum", "barley",
-                    "millet", "oat", "rye", "cereal", "teff", "fonio"]
-    cereal_pattern = "|".join(CEREAL_WORDS)
-
-    # I find the commodity column
-    commodity_col = None
-    for col in flw_raw.columns:
-        if "commodity" in col.lower() or "item" in col.lower() or "crop" in col.lower():
-            commodity_col = col
-            break
-
-    if commodity_col is not None:
-        cereal_mask = flw_raw[commodity_col].str.lower().str.contains(cereal_pattern, na=False)
-        flw_cereal = flw_raw[cereal_mask].copy()
-    else:
-        # If I cannot find a commodity column, I keep all rows
-        flw_cereal = flw_raw.copy()
-
-    # I find the loss percentage column
-    loss_col = None
-    for col in flw_raw.columns:
-        if "loss" in col.lower() and "percent" in col.lower():
-            loss_col = col
-            break
-    if loss_col is None:
-        for col in flw_raw.columns:
-            if "loss" in col.lower():
-                loss_col = col
-                break
-
-    if loss_col is None:
-        print("  Cannot find loss percentage column — check FLW file columns:")
-        print("  ", list(flw_raw.columns))
-        flw_country = pd.DataFrame(columns=["country_code", "cereal_loss_pct"])
-        flw_by_stage = pd.DataFrame(columns=["country_code", "farm_loss_pct",
-                                             "storage_loss_pct", "market_loss_pct"])
-    else:
-        # I convert the loss column to numbers
-        flw_cereal[loss_col] = pd.to_numeric(flw_cereal[loss_col], errors="coerce")
-
-        # I remove impossible values
-        flw_cereal = flw_cereal.dropna(subset=[loss_col])
-        flw_cereal = flw_cereal[flw_cereal[loss_col] >= 0]
-        flw_cereal = flw_cereal[flw_cereal[loss_col] <= 100]
-
-        # I find the year column
-        year_col = None
-        for col in flw_raw.columns:
-            if "year" in col.lower():
-                year_col = col
-                break
-
-        if year_col is not None:
-            flw_cereal[year_col] = pd.to_numeric(flw_cereal[year_col], errors="coerce")
-            flw_recent = flw_cereal[flw_cereal[year_col] >= 2015].copy()
-            flw_recent = flw_recent[flw_recent[year_col] <= 2023].copy()
-        else:
-            flw_recent = flw_cereal.copy()
-
-        print("  Rows after filtering to cereals and recent years:", len(flw_recent))
-
-        # I find the country column
-        country_col = None
-        for col in flw_raw.columns:
-            if "country" in col.lower() or "area" in col.lower():
-                country_col = col
-                break
-
-        if country_col is None:
-            country_col = flw_raw.columns[0]
-
-        # I compute average cereal loss per country
-        flw_country = flw_recent.groupby(country_col)[loss_col].mean().reset_index()
-        flw_country.columns = ["country", "cereal_loss_pct"]
-        flw_country["cereal_loss_pct"] = flw_country["cereal_loss_pct"].round(2)
-
-        # I try to compute loss by supply chain stage
-        flw_by_stage = pd.DataFrame(columns=["country_code", "farm_loss_pct",
-                                             "storage_loss_pct", "market_loss_pct"])
-
-        if stage_col is not None:
-            # I check what stage labels exist
-            stage_values = flw_recent[stage_col].dropna().unique()
-            print("  Supply chain stages found:", list(stage_values[:8]))
-
-            # I try to identify farm-stage, storage-stage, and market-stage rows
-            stage_tables = []
-
-            for stage_value in stage_values:
-                stage_label = str(stage_value).lower()
-                stage_df = flw_recent[flw_recent[stage_col] == stage_value]
-
-                # I work out which column name to give this stage
-                if any(word in stage_label for word in ["farm", "harvest", "field", "production"]):
-                    col_label = "farm_loss_pct"
-                elif any(word in stage_label for word in ["storage", "warehouse", "silo", "store"]):
-                    col_label = "storage_loss_pct"
-                elif any(word in stage_label for word in ["market", "retail", "trade", "wholesale"]):
-                    col_label = "market_loss_pct"
-                elif any(word in stage_label for word in ["transport", "logistics", "distribution"]):
-                    col_label = "transport_loss_pct"
-                elif any(word in stage_label for word in ["process", "handling"]):
-                    col_label = "processing_loss_pct"
-                else:
-                    continue
-
-                # I compute average loss at this stage per country
-                stage_country = stage_df.groupby(country_col)[loss_col].mean().reset_index()
-                stage_country.columns = ["country", col_label]
-                stage_country[col_label] = stage_country[col_label].round(2)
-                stage_tables.append(stage_country)
-
-            if len(stage_tables) > 0:
-                # I merge all stage tables
-                flw_by_stage = stage_tables[0]
-                for t in stage_tables[1:]:
-                    flw_by_stage = flw_by_stage.merge(t, on="country", how="outer")
-                print("  Stage-level loss columns created:", list(flw_by_stage.columns))
-
-        print("  Countries with cereal loss data:", len(flw_country))
+# phl_combined has no supply chain stage breakdown
+flw_by_stage = pd.DataFrame(columns=["country_code"])
 
 
 # ============================================================
@@ -430,11 +311,12 @@ imf_slim = imf[imf_merge_cols].copy()
 master = master.merge(imf_slim, on="country_code", how="left")
 print("  After merging IMF:", master.shape)
 
-# I merge the FAO Food Loss and Waste data (country-level average)
+# I merge the Post-Harvest Loss data (cereal_loss_pct)
+# phl_combined.csv already uses country_code so no name matching is needed
 if "country_code" in flw_country.columns:
     flw_slim = flw_country[["country_code", "cereal_loss_pct"]].copy()
     master = master.merge(flw_slim, on="country_code", how="left")
-    print("  After merging FLW:", master.shape)
+    print("  After merging PHL (cereal_loss_pct):", master.shape)
 
 # I merge the supply chain stage loss data if it exists and has content
 if "country_code" in flw_by_stage.columns and len(flw_by_stage) > 0:
@@ -458,6 +340,54 @@ if wgi is not None:
     print("  After merging WGI governance:", master.shape)
 else:
     print("  WGI not merged — no data available yet")
+
+# ── NEW: Logistics Performance Index (NLP theme: value chain / market access) ──
+# The LPI measures how well a country's logistics infrastructure moves goods
+# from farms to markets and ports. It is the empirical proxy for the
+# "value_chain_market_access" theme discovered by LDA topic modelling.
+LPI_FILE = "data/raw/lpi.csv"
+if os.path.exists(LPI_FILE):
+    lpi_raw = pd.read_csv(LPI_FILE)
+    lpi_slim = lpi_raw[["country_code", "lpi_overall"]].dropna(
+        subset=["country_code"]
+    ).copy()
+    master = master.merge(lpi_slim, on="country_code", how="left")
+    print("  After merging LPI:", master.shape)
+else:
+    print("  LPI file not found — run scripts/download_new_data.py first")
+
+# ── NEW: Rural poverty headcount (NLP theme: smallholder / poverty) ────────────
+# The $2.15/day poverty headcount directly captures the resource constraints
+# facing smallholder farmers — the group the literature most discusses.
+POVERTY_FILE = "data/raw/rural_poverty.csv"
+if os.path.exists(POVERTY_FILE):
+    pov_raw = pd.read_csv(POVERTY_FILE)
+    pov_slim = pov_raw[["country_code", "poverty_headcount_pct_215"]].dropna(
+        subset=["country_code"]
+    ).copy()
+    master = master.merge(pov_slim, on="country_code", how="left")
+    print("  After merging rural poverty:", master.shape)
+else:
+    print("  Rural poverty file not found — run scripts/download_new_data.py first")
+
+# ── NEW: Mobile & internet access (NLP theme: financial access in rural areas) ──
+# Mobile subscriptions and internet usage proxy the reach of digital financial
+# services in rural areas — the channel the literature highlights for
+# smallholder inclusion beyond formal bank branches.
+MOBILE_FILE = "data/raw/mobile_financial_access.csv"
+if os.path.exists(MOBILE_FILE):
+    mob_raw = pd.read_csv(MOBILE_FILE)
+    mob_cols = ["country_code"]
+    for col in ["mobile_subscriptions_per_100"]:
+        # internet_users_pct is already in master from WDI — skip it here
+        if col in mob_raw.columns:
+            mob_cols.append(col)
+    mob_slim = mob_raw[mob_cols].dropna(subset=["country_code"]).copy()
+    mob_slim = mob_slim.drop_duplicates(subset="country_code", keep="first")
+    master = master.merge(mob_slim, on="country_code", how="left")
+    print("  After merging mobile/digital access:", master.shape)
+else:
+    print("  Mobile access file not found — run scripts/download_new_data.py first")
 
 print("  Final master table:", len(master), "countries,", master.shape[1], "columns")
 
@@ -487,13 +417,11 @@ print("  Final master table:", len(master), "countries,", master.shape[1], "colu
 print("\n[6/7] Engineering new features...")
 
 # ── Feature 1: Fertiliser efficiency ─────────────────────────────────────────
-for i in range(len(master)):
-    yield_val = master["cereal_yield_kg_per_ha"].iloc[i] if "cereal_yield_kg_per_ha" in master.columns else None
-    fert_val  = master["fertiliser_kg_per_ha"].iloc[i] if "fertiliser_kg_per_ha" in master.columns else None
-
-    if pd.notna(yield_val) and pd.notna(fert_val) and fert_val > 0:
-        efficiency = round(yield_val / fert_val, 2)
-        master.loc[master.index[i], "fertiliser_efficiency"] = efficiency
+if "cereal_yield_kg_per_ha" in master.columns and "fertiliser_kg_per_ha" in master.columns:
+    fert_nonzero = master["fertiliser_kg_per_ha"].replace(0, np.nan)
+    master["fertiliser_efficiency"] = (
+        master["cereal_yield_kg_per_ha"] / fert_nonzero
+    ).round(2)
 
 print("  fertiliser_efficiency created (cereal_yield / fertiliser_kg_per_ha)")
 
@@ -508,37 +436,53 @@ print("  fertiliser_efficiency created (cereal_yield / fertiliser_kg_per_ha)")
 #   - borrowed_from_bank_pct      (credit actually flowing to people)
 #   - bank_branches_per_100k      (scaled: physical access)
 
-# I list the sub-components of my value chain score
-VCHAIN_COMPONENTS = []
-if "account_ownership_rural_pct" in master.columns:
-    VCHAIN_COMPONENTS.append("account_ownership_rural_pct")
-if "agri_payments_digital_pct" in master.columns:
-    VCHAIN_COMPONENTS.append("agri_payments_digital_pct")
-if "borrowed_from_bank_pct" in master.columns:
-    VCHAIN_COMPONENTS.append("borrowed_from_bank_pct")
+# ── Feature 2: Value chain financial access score ─────────────────────────────
+# Priority order for components (most to least value-chain-specific):
+#   Tier 1 — directly value-chain-specific (from Findex disaggregated):
+#     account_ownership_rural_pct, agri_payments_digital_pct, borrowed_from_bank_pct
+#   Tier 2 — partially value-chain-specific (available disaggregated Findex):
+#     account_ownership_female_pct, account_ownership_poorest40_pct
+#   Tier 3 — broad financial access (used only if Tier 1/2 are absent):
+#     bank_branches_per_100k, atm_per_100k, private_credit_pct_gdp
+#
+# All non-percentage variables are scaled to 0–100 using the sample maximum.
+# Components are averaged row-wise, so countries with partial data still get a score.
 
-# Bank branches need special scaling — they are not a percentage
-# I scale bank branches to a 0–100 range using the observed maximum
-if "bank_branches_per_100k" in master.columns:
-    max_branches = master["bank_branches_per_100k"].max()
-    if pd.notna(max_branches) and max_branches > 0:
-        master["bank_branches_scaled"] = (master["bank_branches_per_100k"] / max_branches) * 100
-        VCHAIN_COMPONENTS.append("bank_branches_scaled")
+VCHAIN_COMPONENTS = []
+
+# Tier 1 — preferred (value-chain-specific Findex variables)
+for col in ["account_ownership_rural_pct", "agri_payments_digital_pct",
+            "borrowed_from_bank_pct"]:
+    if col in master.columns and master[col].notna().sum() >= 50:
+        VCHAIN_COMPONENTS.append(col)
+
+# Tier 2 — disaggregated Findex (available for ~117 countries)
+for col in ["account_ownership_female_pct", "account_ownership_poorest40_pct"]:
+    if col in master.columns and master[col].notna().sum() >= 50:
+        VCHAIN_COMPONENTS.append(col)
+
+# Tier 3 — broad financial infrastructure (scaled to 0–100)
+for col, raw_col in [
+    ("bank_branches_scaled", "bank_branches_per_100k"),
+    ("atm_scaled",           "atm_per_100k"),
+    ("credit_scaled",        "private_credit_pct_gdp"),
+]:
+    if raw_col in master.columns:
+        col_max = master[raw_col].max()
+        if pd.notna(col_max) and col_max > 0:
+            master[col] = (master[raw_col] / col_max * 100).round(2)
+            VCHAIN_COMPONENTS.append(col)
 
 if len(VCHAIN_COMPONENTS) > 0:
     print("  Computing value_chain_finance_score from:", VCHAIN_COMPONENTS)
-
-    # I compute the row-wise average across all available components
-    # .mean(axis=1) averages across columns for each row, skipping blanks
-    component_data = master[VCHAIN_COMPONENTS].copy()
-    master["value_chain_finance_score"] = component_data.mean(axis=1)
-    master["value_chain_finance_score"] = master["value_chain_finance_score"].round(2)
-
+    master["value_chain_finance_score"] = (
+        master[VCHAIN_COMPONENTS].mean(axis=1).round(2)
+    )
     non_null = master["value_chain_finance_score"].notna().sum()
     print("  value_chain_finance_score computed for", non_null, "countries")
 else:
-    print("  No disaggregated Findex data available for value chain score")
-    print("  Check that Phase B downloaded findex_2021.csv with rural columns")
+    print("  No financial access data available for value chain score")
+    print("  Check that Phase B downloaded findex_2021.csv and imf_financial_access.csv")
 
 
 # ============================================================
@@ -605,6 +549,10 @@ if "wgi_political_stability" in master_clean.columns:
     preview_cols.append("wgi_political_stability")
 if "cereal_loss_pct" in master_clean.columns:
     preview_cols.append("cereal_loss_pct")
+if "lpi_overall" in master_clean.columns:
+    preview_cols.append("lpi_overall")
+if "poverty_headcount_pct_215" in master_clean.columns:
+    preview_cols.append("poverty_headcount_pct_215")
 
 # I only show columns that actually exist
 available_preview = [c for c in preview_cols if c in master_clean.columns]
@@ -612,5 +560,5 @@ print(master_clean[available_preview].head(10).to_string(index=False))
 
 print("\n" + "=" * 60)
 print("PHASE C COMPLETE")
-print("Next step: Phase D — fit Models A, B, C, D")
+print("Next step: Phase D — fit Models A, B, C, D, E, F")
 print("=" * 60)

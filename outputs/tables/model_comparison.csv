@@ -1,0 +1,6 @@
+Model,N (countries),Predictors used,OLS R²,OLS Adj R²,OLS F-stat p,RF 5-fold CV R²,XGB 5-fold CV R²
+Model A — Baseline Production,154,7,0.319,0.286,0.0,0.335,0.282
+Model B — +Post-Harvest Loss,154,8,0.319,0.282,0.0,0.343,0.298
+Model C — +Logistics Infrastructure,80,10,0.428,0.345,0.0,0.277,0.165
+Model F — NLP-Discovered Themes,78,12,0.431,0.325,0.0,,
+Model A★ — NLP sample,78,7,0.404,0.345,0.0,,

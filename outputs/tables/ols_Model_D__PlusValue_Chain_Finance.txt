@@ -1,0 +1,37 @@
+                             OLS Regression Results                             
+================================================================================
+Dep. Variable:     undernourishment_pct   R-squared:                       0.550
+Model:                              OLS   Adj. R-squared:                  0.501
+Method:                   Least Squares   F-statistic:                     8.819
+Date:                  Tue, 12 May 2026   Prob (F-statistic):           7.93e-11
+Time:                          18:10:45   Log-Likelihood:                -350.34
+No. Observations:                   114   AIC:                             724.7
+Df Residuals:                       102   BIC:                             757.5
+Df Model:                            11                                         
+Covariance Type:                    HC3                                         
+===================================================================================================
+                                      coef    std err          z      P>|z|      [0.025      0.975]
+---------------------------------------------------------------------------------------------------
+const                              33.3173     14.353      2.321      0.020       5.186      61.448
+cereal_yield_kg_per_ha             -1.2739      1.307     -0.975      0.330      -3.836       1.288
+fertiliser_kg_per_ha               -0.3364      0.747     -0.450      0.653      -1.801       1.129
+arable_land_pct                    -0.0526      0.041     -1.279      0.201      -0.133       0.028
+gdp_per_capita_usd                 -1.6327      1.248     -1.308      0.191      -4.079       0.813
+rural_population_pct               -0.0670      0.046     -1.454      0.146      -0.157       0.023
+agri_employment_pct                 0.1681      0.075      2.230      0.026       0.020       0.316
+livestock_production_index         -0.0044      0.028     -0.161      0.872      -0.059       0.050
+cereal_loss_pct                     0.2035      0.183      1.110      0.267      -0.156       0.563
+account_ownership_female_pct       -0.0165      0.071     -0.231      0.817      -0.157       0.123
+account_ownership_poorest40_pct     0.0764      0.064      1.187      0.235      -0.050       0.203
+value_chain_finance_score          -0.0967      0.089     -1.091      0.275      -0.270       0.077
+==============================================================================
+Omnibus:                       16.588   Durbin-Watson:                   1.708
+Prob(Omnibus):                  0.000   Jarque-Bera (JB):               23.964
+Skew:                           0.716   Prob(JB):                     6.26e-06
+Kurtosis:                       4.730   Cond. No.                     3.67e+03
+==============================================================================
+
+Notes:
+[1] Standard Errors are heteroscedasticity robust (HC3)
+[2] The condition number is large, 3.67e+03. This might indicate that there are
+strong multicollinearity or other numerical problems.

@@ -17,6 +17,7 @@ data/raw/
 # Model artefacts
 outputs/models/*.pkl
 outputs/models/*.joblib
+outputs/matplotlib_config/
 
 # OS
 .DS_Store

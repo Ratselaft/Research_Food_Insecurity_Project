@@ -1,0 +1,33 @@
+                                OLS Regression Results                               
+=====================================================================================
+Dep. Variable:     cereal_availability_kg_pc   R-squared:                       0.319
+Model:                                   OLS   Adj. R-squared:                  0.286
+Method:                        Least Squares   F-statistic:                     14.48
+Date:                       Tue, 12 May 2026   Prob (F-statistic):           3.17e-14
+Time:                               19:33:51   Log-Likelihood:                -232.23
+No. Observations:                        154   AIC:                             480.5
+Df Residuals:                            146   BIC:                             504.8
+Df Model:                                  7                                         
+Covariance Type:                         HC3                                         
+==============================================================================================
+                                 coef    std err          z      P>|z|      [0.025      0.975]
+----------------------------------------------------------------------------------------------
+const                         -3.3888      1.937     -1.750      0.080      -7.185       0.407
+cereal_yield_kg_per_ha         0.5791      0.336      1.721      0.085      -0.080       1.239
+fertiliser_kg_per_ha          -0.1467      0.125     -1.175      0.240      -0.391       0.098
+arable_land_pct                0.0294      0.008      3.804      0.000       0.014       0.045
+gdp_per_capita_usd             0.3873      0.148      2.616      0.009       0.097       0.677
+rural_population_pct           0.0197      0.008      2.326      0.020       0.003       0.036
+agri_employment_pct            0.0004      0.009      0.044      0.965      -0.018       0.018
+livestock_production_index    -0.0002      0.005     -0.041      0.968      -0.009       0.009
+==============================================================================
+Omnibus:                       13.927   Durbin-Watson:                   2.123
+Prob(Omnibus):                  0.001   Jarque-Bera (JB):               15.591
+Skew:                          -0.644   Prob(JB):                     0.000412
+Kurtosis:                       3.877   Cond. No.                     2.28e+03
+==============================================================================
+
+Notes:
+[1] Standard Errors are heteroscedasticity robust (HC3)
+[2] The condition number is large, 2.28e+03. This might indicate that there are
+strong multicollinearity or other numerical problems.

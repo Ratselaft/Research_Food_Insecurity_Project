@@ -1,0 +1,20 @@
+variable,boot_mean,ci_lower_95,ci_upper_95,n_valid,model
+cereal_yield_kg_per_ha,0.5997,-0.0238,1.2866,1000,Model A
+fertiliser_kg_per_ha,-0.1585,-0.3907,0.0711,1000,Model A
+arable_land_pct,0.0292,0.0153,0.0444,1000,Model A
+gdp_per_capita_usd,0.3832,0.0862,0.6739,1000,Model A
+rural_population_pct,0.0199,0.0041,0.0371,1000,Model A
+agri_employment_pct,-0.0002,-0.017,0.017,1000,Model A
+livestock_production_index,0.0,-0.0089,0.0089,1000,Model A
+cereal_yield_kg_per_ha,2.5524,-0.546,9.4248,1000,Model F
+fertiliser_kg_per_ha,-2.1717,-9.3306,0.7421,1000,Model F
+arable_land_pct,0.0222,0.0029,0.0424,1000,Model F
+gdp_per_capita_usd,0.2411,-0.3542,0.8205,1000,Model F
+rural_population_pct,0.0323,0.006,0.0588,1000,Model F
+agri_employment_pct,-0.0071,-0.0357,0.0213,1000,Model F
+livestock_production_index,-0.004,-0.022,0.0101,1000,Model F
+cereal_loss_pct,0.0333,-0.094,0.1454,1000,Model F
+lpi_overall,0.6705,-0.1988,1.706,1000,Model F
+rural_electricity_access_pct,0.0084,-0.0098,0.0285,1000,Model F
+fertiliser_efficiency,-1.844,-8.9571,0.8065,1000,Model F
+food_price_inflation_pct,0.0197,-0.0054,0.0745,1000,Model F

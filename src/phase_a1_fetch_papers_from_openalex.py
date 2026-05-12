@@ -146,6 +146,58 @@ SEARCHES = [
     '"machine learning" "food security" prediction',
     '"topic model" "food security"',
     '"cross-country" "undernourishment" "determinants"',
+
+    # Targeted expansion: food security + post-harvest loss
+    '"postharvest loss" "food security" "smallholder"',
+    '"post-harvest loss" "food insecurity" "smallholder"',
+    '"postharvest storage" "food security" "smallholder"',
+    '"grain storage" "food security" "smallholder"',
+    '"storage technology" "food security" "farmers"',
+    '"food loss" "food security" "value chain"',
+    '"food losses" "food insecurity" "supply chain"',
+    '"cold chain" "food security" "developing countries"',
+
+    # Targeted expansion: food security + financial access
+    '"financial inclusion" "household food security"',
+    '"credit access" "household food security"',
+    '"agricultural credit" "smallholder" "food security"',
+    '"rural finance" "smallholder" "food security"',
+    '"microfinance" "household food security"',
+    '"mobile money" "smallholder" "food security"',
+    '"digital finance" "smallholder" "food security"',
+    '"financial services" "smallholder farmers" "food security"',
+    '"access to credit" "smallholder farmers" "food security"',
+    '"farm credit" "food security" "smallholder"',
+
+    # Targeted expansion: food security + value chains and markets
+    '"agricultural value chain" "food security"',
+    '"food value chain" "food security" "smallholder"',
+    '"value chain finance" "food security"',
+    '"market access" "household food security"',
+    '"market participation" "food security" "smallholder"',
+    '"agricultural markets" "food security" "smallholder"',
+    '"supply chain" "food security" "smallholder"',
+    '"cooperatives" "smallholder" "food security"',
+
+    # Targeted expansion: food security + smallholders and inclusion
+    '"smallholder farmers" "household food security"',
+    '"smallholder agriculture" "food insecurity"',
+    '"farm households" "food insecurity" "determinants"',
+    '"rural households" "food insecurity" "determinants"',
+    '"women farmers" "food security" "credit"',
+    '"women empowerment" "agriculture" "food security"',
+    '"gender" "smallholder" "food security"',
+    '"poverty" "smallholder" "food security"',
+
+    # Targeted expansion: empirical and policy alignment
+    '"determinants of food insecurity" "smallholder"',
+    '"determinants of household food security" "farmers"',
+    '"food insecurity" "panel data" "agriculture"',
+    '"food security" "random forest" "agriculture"',
+    '"food security" "machine learning" "agricultural"',
+    '"undernourishment" "agriculture" "governance"',
+    '"food security" "governance" "smallholder"',
+    '"food security" "institutional quality" "agriculture"',
 ]
 
 
@@ -257,7 +309,7 @@ for i in range(len(SEARCHES)):
     query = SEARCHES[i]
     print("[" + str(i + 1) + "/" + str(len(SEARCHES)) + "] " + query[:70] + "...")
 
-    results = search_openalex(query, max_results=20)
+    results = search_openalex(query, max_results=30)
     print("  Got", len(results), "papers")
     all_records.extend(results)
 
@@ -494,27 +546,101 @@ def load_scopus_ris(filepath):
         return None
 
 
+def find_scopus_csv_files():
+    # I look for every Scopus CSV export in data/raw/.
+    # This lets me export Scopus in batches and combine them later.
+    scopus_files = []
+
+    raw_folder = "data/raw"
+
+    # If the raw folder does not exist, there is nothing to load.
+    if not os.path.exists(raw_folder):
+        return scopus_files
+
+    # I read every filename in data/raw.
+    for filename in os.listdir(raw_folder):
+        # I only want files named like:
+        # scopus_export.csv, scopus_export_2.csv, scopus_export_3.csv
+        is_scopus_file = filename.startswith("scopus_export")
+        is_csv_file = filename.endswith(".csv")
+
+        if is_scopus_file and is_csv_file:
+            filepath = os.path.join(raw_folder, filename)
+            scopus_files.append(filepath)
+
+    # I sort the list so the loading order is predictable.
+    scopus_files.sort()
+
+    return scopus_files
+
+
+def find_scopus_ris_files():
+    # I look for every Scopus RIS export in data/raw/.
+    # This is useful when Scopus will not give me CSV.
+    scopus_files = []
+
+    raw_folder = "data/raw"
+
+    # If the raw folder does not exist, there is nothing to load.
+    if not os.path.exists(raw_folder):
+        return scopus_files
+
+    # I read every filename in data/raw.
+    for filename in os.listdir(raw_folder):
+        # I only want files named like:
+        # scopus_export.ris, scopus_export_2.ris, scopus_export_3.ris
+        is_scopus_file = filename.startswith("scopus_export")
+        is_ris_file = filename.endswith(".ris")
+
+        if is_scopus_file and is_ris_file:
+            filepath = os.path.join(raw_folder, filename)
+            scopus_files.append(filepath)
+
+    # I sort the list so the loading order is predictable.
+    scopus_files.sort()
+
+    return scopus_files
+
+
 # I collect all external database records here
 external_records = []
 
 # I check for each possible export file and load it if it exists
 
-# --- Scopus CSV ---
-SCOPUS_CSV = "data/raw/scopus_export.csv"
-if os.path.exists(SCOPUS_CSV):
-    scopus_df = load_scopus_csv(SCOPUS_CSV)
-    if scopus_df is not None and len(scopus_df) > 0:
-        external_records.append(scopus_df)
-else:
-    print("  Scopus CSV not found at:", SCOPUS_CSV)
-    print("  Export from Scopus (SHU library) and save to that path.")
+# --- Scopus CSV exports ---
+SCOPUS_CSV_FILES = find_scopus_csv_files()
 
-# --- Scopus RIS (alternative format) ---
-SCOPUS_RIS = "data/raw/scopus_export.ris"
-if os.path.exists(SCOPUS_RIS):
-    ris_df = load_scopus_ris(SCOPUS_RIS)
-    if ris_df is not None and len(ris_df) > 0:
-        external_records.append(ris_df)
+if len(SCOPUS_CSV_FILES) > 0:
+    for scopus_csv in SCOPUS_CSV_FILES:
+        scopus_df = load_scopus_csv(scopus_csv)
+
+        if scopus_df is not None and len(scopus_df) > 0:
+            external_records.append(scopus_df)
+
+else:
+    print("  No Scopus CSV exports found.")
+    print("  Export from Scopus (SHU library) and save as:")
+    print("  data/raw/scopus_export.csv")
+    print("  Extra exports can be named:")
+    print("  data/raw/scopus_export_2.csv")
+    print("  data/raw/scopus_export_3.csv")
+
+# --- Scopus RIS exports (alternative format) ---
+SCOPUS_RIS_FILES = find_scopus_ris_files()
+
+if len(SCOPUS_RIS_FILES) > 0:
+    for scopus_ris in SCOPUS_RIS_FILES:
+        ris_df = load_scopus_ris(scopus_ris)
+
+        if ris_df is not None and len(ris_df) > 0:
+            external_records.append(ris_df)
+else:
+    print("  No Scopus RIS exports found.")
+    print("  If CSV export does not work, export RIS from Scopus and save as:")
+    print("  data/raw/scopus_export.ris")
+    print("  Extra RIS exports can be named:")
+    print("  data/raw/scopus_export_2.ris")
+    print("  data/raw/scopus_export_3.ris")
 
 # --- Web of Science export ---
 WOS_FILE = "data/raw/wos_export.txt"

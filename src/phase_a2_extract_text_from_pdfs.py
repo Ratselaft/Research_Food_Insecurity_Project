@@ -19,6 +19,8 @@
 
 # I need os to look through folders and check file paths
 import os
+# I need re for pattern matching when filtering title candidates
+import re
 
 # I need pandas to work with my CSV corpus table
 import pandas as pd
@@ -26,7 +28,13 @@ import pandas as pd
 import pdfplumber
 
 # ── I'm setting the folder where my PDFs are saved ────────────────────────────
-PDF_FOLDER = "/Users/productguru/Documents/Research Project Repo"
+# This now matches Step 1 of the project:
+# put new PDF papers inside data/raw/pdfs/
+PDF_FOLDER = "data/raw/pdfs"
+
+# This is the older folder that already has some PDFs in this project.
+# I keep it here so we do not lose work that was saved before this correction.
+OLD_PDF_FOLDER = "data/raw/Peer Review"
 
 # ── I'm setting the path to my existing corpus file ───────────────────────────
 CORPUS_FILE = "data/raw/corpus_metadata.csv"
@@ -114,41 +122,57 @@ def is_relevant(text):
 # ============================================================
 
 def get_title_from_text(text, filename):
-    # I split the text into lines and remove any short or blank lines
+    # I split the text into lines and look only at the first 40 lines,
+    # where the actual paper title almost always appears.
     all_lines = text.split("\n")
 
-    # I'll collect only the lines that are long enough to be a title
-    long_lines = []
-    for line in all_lines:
-        # I remove extra spaces from both ends of the line
+    title_candidates = []
+    for line in all_lines[:40]:
         clean_line = line.strip()
-        # I only keep lines that are longer than 20 characters
-        if len(clean_line) > 20:
-            long_lines.append(clean_line)
 
-    # If I found any long lines, I pick the best one as the title
-    if long_lines:
-        # I look at the first three long lines
-        candidates = long_lines[:3]
+        # Titles are typically between 30 and 250 characters
+        if len(clean_line) < 30 or len(clean_line) > 250:
+            continue
 
-        # I pick the longest one — titles are usually the longest heading near the top
+        lower = clean_line.lower()
+
+        # I skip lines that look like journal headers, author bylines, or DOIs
+        # because pdfplumber often picks these up near the top of a PDF.
+        if (
+            "http" in lower                                           # URL / DOI link
+            or "doi.org" in lower                                     # DOI line
+            or "et al." in lower                                      # "Author et al." byline
+            or "·" in clean_line                                      # middle-dot author separator
+            or "|" in clean_line                                      # journal-header pipe separator
+            or "@" in clean_line                                      # email address
+            or re.search(r"\(\d{4}\)\s*\d+:", clean_line)           # "Journal (2026) 6:86"
+            or re.match(r"^\d+\s*$", clean_line)                    # lone page number
+            # Two or more names with superscript affiliation numbers (e.g. "Simane1, Berhane2")
+            or len(re.findall(r"[A-Z][a-z]+\d+", clean_line)) >= 2
+        ):
+            continue
+
+        title_candidates.append(clean_line)
+
+    if title_candidates:
+        # Pick the longest of the first three good candidates —
+        # real titles tend to be the longest descriptive line near the top.
+        candidates = title_candidates[:3]
         best_title = candidates[0]
         for candidate in candidates:
             if len(candidate) > len(best_title):
                 best_title = candidate
+        # A real title starts with an upper-case letter.
+        # If the best candidate starts with lowercase it is probably a
+        # mid-sentence fragment (e.g. "in ethiopia using auto-regressive…").
+        # Fall through to the filename fallback instead.
+        if best_title and best_title[0].isupper():
+            return best_title
 
-        return best_title
-
-    # If I couldn't find any decent lines, I use the filename instead
-    # I get just the file name without the folder path
+    # If no good line was found, fall back to the PDF filename.
     just_filename = os.path.basename(filename)
-
-    # I remove the .pdf extension
     name_without_extension = os.path.splitext(just_filename)[0]
-
-    # I replace dashes and underscores with spaces to make it more readable
     readable_name = name_without_extension.replace("-", " ").replace("_", " ")
-
     return readable_name
 
 
@@ -190,11 +214,13 @@ def get_abstract_from_text(text):
         # I remove extra spaces from both ends
         abstract = abstract.strip()
 
-        # Abstracts are never more than 2000 characters — I trim to be safe
-        return abstract[:2000]
+        # Cap at 3000 characters — enough for any realistic abstract.
+        return abstract[:3000]
 
-    # If there's no "abstract" section, I just take the first 1500 characters
-    return text[:1500].strip()
+    # If there's no "abstract" section, I take the first 4000 characters.
+    # A longer window gives the scorer in Phase A4 more text to match against,
+    # which matters especially for papers whose key terms appear in the intro.
+    return text[:4000].strip()
 
 
 # ============================================================
@@ -207,14 +233,23 @@ print("Looking for PDF files...")
 # I'll store the full path of every PDF I find in this list
 all_pdfs = []
 
-# I look through every file in my research folder
-for filename in os.listdir(PDF_FOLDER):
-    # I only care about files that end in .pdf
-    if filename.endswith(".pdf"):
-        # I build the full path to this file
-        full_path = os.path.join(PDF_FOLDER, filename)
-        # I add it to my list
-        all_pdfs.append(full_path)
+# I look through the new folder and the older folder.
+# This is simple on purpose: one folder path at a time.
+pdf_folders = [PDF_FOLDER, OLD_PDF_FOLDER]
+
+for folder in pdf_folders:
+    # If a folder does not exist yet, I skip it.
+    if not os.path.exists(folder):
+        continue
+
+    # I look through every file in this folder.
+    for filename in os.listdir(folder):
+        # I only care about files that end in .pdf
+        if filename.endswith(".pdf"):
+            # I build the full path to this file
+            full_path = os.path.join(folder, filename)
+            # I add it to my list
+            all_pdfs.append(full_path)
 
 # I tell the user how many PDFs I found
 print(f"Found {len(all_pdfs)} PDF files in the folder")
@@ -227,11 +262,20 @@ print(f"Found {len(all_pdfs)} PDF files in the folder")
 # I read the existing corpus CSV into a table
 existing_corpus = pd.read_csv(CORPUS_FILE)
 
+# I remove any rows that were added by a previous PDF run.
+# This makes the script safe to re-run: old PDF entries (which may have had
+# broken title / abstract extraction) are replaced with fresh ones.
+before_count = len(existing_corpus)
+existing_corpus = existing_corpus[existing_corpus["source_db"] != "PDF"].copy()
+removed_count = before_count - len(existing_corpus)
+if removed_count > 0:
+    print(f"Removed {removed_count} stale PDF entries from corpus (will re-add fresh)")
+
 # I make sure the abstract column has no blank values
 existing_corpus["abstract"] = existing_corpus["abstract"].fillna("").astype(str)
 
 # I tell the user how many papers are already in the corpus
-print(f"Existing corpus has {len(existing_corpus)} papers")
+print(f"Existing corpus (OpenAlex + Scopus) has {len(existing_corpus)} papers")
 
 
 # ============================================================
@@ -243,6 +287,7 @@ print("\nReading PDFs...")
 
 # I'll collect any new papers I want to add in this list
 new_papers = []
+new_titles_this_run = []
 
 # I go through each PDF file one by one
 for pdf_path in all_pdfs:
@@ -281,6 +326,11 @@ for pdf_path in all_pdfs:
             already_there = True
             break
 
+    for new_title in new_titles_this_run:
+        if title.lower()[:50] in new_title.lower():
+            already_there = True
+            break
+
     # If this paper is already in the corpus, I skip it
     if already_there:
         print("    Skipped — already in corpus")
@@ -298,10 +348,11 @@ for pdf_path in all_pdfs:
     paper_info["year"]        = "2026"       # Most of these are 2026 papers
     paper_info["doi"]         = ""
     paper_info["openalex_id"] = ""
-    paper_info["source"]      = "pdf_manual" # I mark these as manually added from PDFs
+    paper_info["source_db"]   = "PDF"        # I mark these as manually added from PDFs
 
     # I add this paper's info to my list of new papers
     new_papers.append(paper_info)
+    new_titles_this_run.append(title)
 
 
 # ============================================================

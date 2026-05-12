@@ -1,0 +1,10 @@
+alignment_level,source_db,papers
+moderate,OpenAlex,170
+moderate,PDF,2
+moderate,Scopus,3
+strict,OpenAlex,178
+strict,PDF,8
+strict,Scopus,17
+weak,OpenAlex,927
+weak,PDF,1
+weak,Scopus,21

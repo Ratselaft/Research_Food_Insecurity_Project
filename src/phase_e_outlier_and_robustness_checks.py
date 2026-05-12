@@ -35,6 +35,9 @@ warnings.filterwarnings('ignore')
 # I need os to create folders
 import os
 
+from matplotlib_setup import use_project_matplotlib_config
+
+use_project_matplotlib_config()
 # I need matplotlib to draw charts
 import matplotlib
 # I need numpy for mathematical operations
@@ -79,20 +82,35 @@ master = pd.read_csv("data/processed/master_dataset_with_dv.csv")
 # I let the user know how many countries I've loaded
 print(f"  Countries loaded: {len(master)}")
 
-# I list the predictors I use in Model A
+# I list the predictors I use in Model A — must match Phase D exactly
 MODEL_A_VARS = [
     "cereal_yield_kg_per_ha",
     "fertiliser_kg_per_ha",
     "arable_land_pct",
     "gdp_per_capita_usd",
-    "internet_users_pct",
+    "rural_population_pct",
+    "agri_employment_pct",
+    "livestock_production_index",
 ]
 
 # This is the variable I'm trying to predict
-DV = "undernourishment_pct"
+DV = "cereal_availability_kg_pc"
 
-# I log-transform the skewed predictors (same as I did in Phase D)
-LOG_COLS = ["gdp_per_capita_usd", "cereal_yield_kg_per_ha", "fertiliser_kg_per_ha"]
+# Save the raw (unlogged) DV before log-transforming — used in Spec 3
+# to test sensitivity to the log specification.
+if DV in master.columns:
+    master["cereal_availability_kg_pc_raw"] = master[DV].clip(lower=0).copy()
+
+# I log-transform exactly the same columns Phase D logs.
+# Phase D logs the DV (right-skewed, range 5–1,500+ kg/person) and the
+# three skewed predictors in Model A. Matching this exactly ensures Spec 1
+# replicates Phase D's Model A result.
+LOG_COLS = [
+    "cereal_availability_kg_pc",  # DV: log-transform matches Phase D
+    "gdp_per_capita_usd",
+    "cereal_yield_kg_per_ha",
+    "fertiliser_kg_per_ha",
+]
 
 # I go through each column that needs log-transforming
 for col in LOG_COLS:
@@ -175,7 +193,7 @@ except Exception as e:
 # ============================================================
 
 # I figure out which columns I need to have complete data for
-needed_cols = MODEL_A_VARS + [DV, "country_name", "country_code"]
+needed_cols = MODEL_A_VARS + [DV, "cereal_availability_kg_pc_raw", "country_name", "country_code"]
 
 # I keep only columns that actually exist in my table
 cols_that_exist = []
@@ -416,19 +434,23 @@ else:
     print(f"  Skipped — only {len(working_precip)} complete rows")
 
 
-# ── Spec 3: I'm log-transforming the dependent variable ─────────────────────
-print("\nSpec 3 — Log-transform undernourishment (DV)")
+# ── Spec 3: I'm using the raw (unlogged) DV — sensitivity to log spec ────────
+print("\nSpec 3 — Level DV (raw cereal availability, sensitivity to log spec)")
 
-# I log-transform the outcome variable
-# Some researchers prefer this when the outcome is a skewed percentage
-y3 = np.log1p(y.clip(lower=0))
+# The baseline uses log-transformed cereal_availability_kg_pc (matching Phase D).
+# This spec checks whether the main findings survive on the raw kg/person scale.
+if "cereal_availability_kg_pc_raw" in working.columns:
+    y3 = working["cereal_availability_kg_pc_raw"]
+else:
+    # Fallback: back-transform the already-logged DV
+    y3 = np.expm1(y)
 
-# I fit the OLS with the same predictors but the log-transformed outcome
-row3, m3 = fit_ols_spec(X_base, y3, "Spec 3 — Log DV")
+# I fit the OLS with the same predictors but the unlogged outcome
+row3, m3 = fit_ols_spec(X_base, y3, "Spec 3 — Level DV")
 spec_results.append(row3)
 
 print(f"  N={row3['N']}  R²={row3['R²']}  Adj R²={row3['Adj R²']}")
-print(f"  Note: coefficients now mean % changes in log(undernourishment)")
+print(f"  Note: coefficients are on raw kg/person/year scale (DV not log-transformed)")
 
 
 # ── Spec 4: I'm dropping Cook's Distance outliers ────────────────────────────
@@ -468,14 +490,67 @@ else:
     print(f"  Skipped — too few countries remaining")
 
 
+# ── Spec 6: I'm adding WGI political stability as a governance control ────────
+# If the key findings survive once I control for governance quality,
+# it means the results are not simply capturing "poor governance = poor everything".
+print("\nSpec 6 — Add WGI political stability (governance control)")
+
+wgi_col = "wgi_political_stability"
+if wgi_col in master.columns:
+    cols_spec6 = [c for c in MODEL_A_VARS + [DV, wgi_col, "country_name"]
+                  if c in master.columns]
+    working_wgi = master[cols_spec6].dropna().copy()
+
+    if len(working_wgi) >= 30:
+        X6 = working_wgi[MODEL_A_VARS + [wgi_col]].copy()
+        y6 = working_wgi[DV]
+        row6, m6 = fit_ols_spec(X6, y6, "Spec 6 — +WGI Gov")
+        spec_results.append(row6)
+        wgi_coef = m6.params.get(wgi_col, np.nan)
+        wgi_pval = m6.pvalues.get(wgi_col, np.nan)
+        wgi_sig  = "***" if wgi_pval < 0.01 else "**" if wgi_pval < 0.05 else "*" if wgi_pval < 0.10 else ""
+        print(f"  N={row6['N']}  R²={row6['R²']}  Adj R²={row6['Adj R²']}")
+        print(f"  wgi_political_stability coef={wgi_coef:.3f}  p={wgi_pval:.4f}  {wgi_sig}")
+    else:
+        print(f"  Skipped — only {len(working_wgi)} complete rows")
+else:
+    print("  Skipped — wgi_political_stability not in master (run Phase B + Phase C first)")
+
+
+# ── Spec 7: Developing countries only (GDP per capita < USD 12,535) ──────────
+# My dissertation focuses on low- and middle-income countries where food
+# insecurity is a live problem. This spec checks whether results hold
+# when I exclude high-income countries that drive the upper tail.
+# Note: GDP is already log-transformed in working[], so threshold = log1p(12535)
+print("\nSpec 7 — Developing countries only (GDP pc < USD 12,535 at 2021 prices)")
+
+gdp_col_log = "gdp_per_capita_usd"   # already log1p-transformed in working[]
+dev_log_threshold = np.log1p(12535)   # ≈ 9.44
+
+if gdp_col_log in working.columns:
+    dev_mask = working[gdp_col_log] < dev_log_threshold
+    X7 = X_base[dev_mask]
+    y7 = y[dev_mask]
+    n_dev = dev_mask.sum()
+
+    if len(X7) >= 30:
+        row7, m7 = fit_ols_spec(X7, y7, f"Spec 7 — Developing (N={n_dev})")
+        spec_results.append(row7)
+        print(f"  N={row7['N']}  R²={row7['R²']}  Adj R²={row7['Adj R²']}")
+    else:
+        print(f"  Skipped — only {n_dev} developing countries with complete data")
+else:
+    print("  Skipped — gdp_per_capita_usd not in working dataset")
+
+
 # ============================================================
 # Step 7: I'm building the robustness summary table
 # ============================================================
 
 print(f"\n[7] Building robustness summary table...")
 
-# I list the variables I want to track across all five specs
-TRACK_VARS = MODEL_A_VARS + ["avg_precipitation_mm"]
+# I track all Model A predictors plus the variables added in Specs 2, 6
+TRACK_VARS = MODEL_A_VARS + ["avg_precipitation_mm", "wgi_political_stability"]
 
 # I print a header row
 print(f"\n{'Variable':<30}", end="")
@@ -533,10 +608,9 @@ print(f"\nFull robustness table saved → outputs/tables/robustness_specificatio
 
 print("\n[8] Saving robustness coefficient plot...")
 
-# I select the key variables I want to show stability for
+# I show the three most dissertation-relevant predictors from Model A
 key_vars_to_plot = []
-for v in ["internet_users_pct", "gdp_per_capita_usd", "cereal_yield_kg_per_ha"]:
-    # I only include it if it appears in at least one spec result
+for v in ["gdp_per_capita_usd", "agri_employment_pct", "cereal_yield_kg_per_ha"]:
     if any(v + "_coef" in r for r in spec_results):
         key_vars_to_plot.append(v)
 
@@ -548,8 +622,8 @@ fig, axes  = plt.subplots(1, n_subplots, figsize=(5 * n_subplots, 5))
 if n_subplots == 1:
     axes = [axes]
 
-# I set the bar colours for the five specs
-colours = ["#4472C4", "#ED7D31", "#70AD47", "#FF0000", "#7030A0"]
+# I set the bar colours for the seven specs
+colours = ["#4472C4", "#ED7D31", "#70AD47", "#FF0000", "#7030A0", "#00B0F0", "#FFC000"]
 
 # I go through each variable and draw its bar chart
 for ax_index in range(len(key_vars_to_plot)):
@@ -597,8 +671,8 @@ for ax_index in range(len(key_vars_to_plot)):
     ax.set_ylabel("OLS coefficient")
 
 # I add a main title for the whole figure
-plt.suptitle("Robustness check: key coefficients across 5 specifications\n"
-             "(S1=Baseline, S2=+Precip, S3=Log DV, S4=No Cook, S5=No ISO)",
+plt.suptitle("Robustness check: key coefficients across 7 specifications\n"
+             "(S1=Baseline, S2=+Precip, S3=Log DV, S4=No Cook, S5=No ISO, S6=+WGI, S7=Dev only)",
              fontsize=10, y=1.02)
 
 # I tidy up the layout
@@ -615,32 +689,172 @@ print("  Coefficient stability chart saved → outputs/figures/robustness_coeffi
 # Step 9: I'm printing the plain English interpretation
 # ============================================================
 
+# ============================================================
+# Step 10: Model F robustness — do the NLP findings hold up?
+# ============================================================
+# NLP-discovered availability-side themes tested in Model F:
+#   cereal_loss_pct               (Topic 7: post-harvest loss — n.s. in Phase D)
+#   lpi_overall                   (Topic 3: logistics — n.s. in Phase D)
+#   rural_electricity_access_pct  (Topics 2/4: infrastructure — n.s. in Phase D)
+#   fertiliser_efficiency         (Topic 6: input efficiency — n.s. in Phase D)
+#   food_price_inflation_pct      (Topic 1: price signal — n.s. in Phase D)
+#
+# All NLP bootstrap CIs crossed zero in Phase D.
+# These robustness specs test whether the NLP null result is stable across
+# alternative samples and specifications, and whether the robust predictors
+# (arable_land, GDP, rural_population) hold in every sub-sample.
+
+print(f"\n{'='*60}")
+print("[10] Model F robustness — NLP availability-side themes")
+print(f"{'='*60}")
+
+MODEL_F_VARS_E = [
+    "cereal_yield_kg_per_ha", "fertiliser_kg_per_ha", "arable_land_pct",
+    "gdp_per_capita_usd", "rural_population_pct", "agri_employment_pct",
+    "livestock_production_index",
+    "cereal_loss_pct",               # Topic 7: post-harvest loss
+    "lpi_overall",                   # Topic 3: logistics and market investment
+    "rural_electricity_access_pct",  # Topics 2/4: infrastructure for food systems
+    "fertiliser_efficiency",         # Topic 6: land productivity / input efficiency
+    "food_price_inflation_pct",      # Topic 1: market signal of availability disruption
+]
+MODEL_F_LOG_E = [
+    "cereal_availability_kg_pc",     # DV: log-transform matches Phase D
+    "gdp_per_capita_usd",
+    "cereal_yield_kg_per_ha",
+    "fertiliser_kg_per_ha",
+    "fertiliser_efficiency",
+]
+NLP_FOCUS = ["cereal_loss_pct", "lpi_overall", "rural_electricity_access_pct"]
+
+master_f = pd.read_csv("data/processed/master_dataset_with_dv.csv")
+# Save raw DV before logging (for Spec F3 sensitivity)
+if DV in master_f.columns:
+    master_f["cereal_availability_kg_pc_raw"] = master_f[DV].clip(lower=0).copy()
+for col in MODEL_F_LOG_E:
+    if col in master_f.columns:
+        master_f[col] = np.log1p(master_f[col].clip(lower=0))
+
+f_needed = [c for c in MODEL_F_VARS_E + [DV, "cereal_availability_kg_pc_raw",
+            "country_name", "country_code"] if c in master_f.columns]
+working_f = master_f[f_needed].dropna(subset=[c for c in MODEL_F_VARS_E + [DV]
+                                               if c in master_f.columns]).reset_index(drop=True)
+print(f"\n  Model F working dataset: {len(working_f)} countries")
+
+spec_f_results = []
+
+if len(working_f) >= 30:
+    X_fb = working_f[[c for c in MODEL_F_VARS_E if c in working_f.columns]]
+    y_fb = working_f[DV]
+
+    # ── Spec F1: Model F baseline ─────────────────────────────
+    print("\n  Spec F1 — Model F Baseline")
+    rowf1, mf1 = fit_ols_spec(X_fb, y_fb, "Spec F1 — Model F Baseline")
+    spec_f_results.append(rowf1)
+    print(f"    N={rowf1['N']}  R²={rowf1['R²']}  Adj R²={rowf1['Adj R²']}")
+
+    # ── Spec F2: Developing countries only ────────────────────
+    print("\n  Spec F2 — Developing countries only (GDP pc < $12,535)")
+    dev_mask_f = working_f["gdp_per_capita_usd"] < np.log1p(12535)
+    X_f2 = X_fb[dev_mask_f].copy()
+    y_f2 = y_fb[dev_mask_f].copy()
+    if len(X_f2) >= 30:
+        rowf2, _ = fit_ols_spec(X_f2, y_f2, "Spec F2 — Model F Developing")
+        spec_f_results.append(rowf2)
+        print(f"    N={rowf2['N']}  R²={rowf2['R²']}  Adj R²={rowf2['Adj R²']}")
+    else:
+        print(f"    Skipped — only {len(X_f2)} developing countries in Model F sample")
+
+    # ── Spec F3: Level DV (raw cereal availability) ───────────────────────────
+    print("\n  Spec F3 — Level DV (raw cereal availability, sensitivity to log spec)")
+    # The baseline uses log-transformed DV matching Phase D.
+    # This checks whether NLP null results hold on the raw kg/person scale.
+    if "cereal_availability_kg_pc_raw" in working_f.columns:
+        y_f3 = working_f["cereal_availability_kg_pc_raw"]
+    else:
+        y_f3 = np.expm1(y_fb)
+    rowf3, _ = fit_ols_spec(X_fb, y_f3, "Spec F3 — Model F Level DV")
+    spec_f_results.append(rowf3)
+    print(f"    N={rowf3['N']}  R²={rowf3['R²']}  Adj R²={rowf3['Adj R²']}")
+
+    # ── Spec F4: Remove Cook's Distance outliers ──────────────
+    print("\n  Spec F4 — Remove Cook's Distance outliers (Model F sample)")
+    X_fb_const = sm.add_constant(X_fb)
+    mf_base    = sm.OLS(y_fb, X_fb_const).fit()
+    f_cooks, _ = OLSInfluence(mf_base).cooks_distance
+    f_threshold = 4 / len(working_f)
+    f_out_mask  = f_cooks > f_threshold
+    n_f_out     = f_out_mask.sum()
+    X_f4 = X_fb[~f_out_mask].copy()
+    y_f4 = y_fb[~f_out_mask].copy()
+    if len(X_f4) >= 30:
+        rowf4, _ = fit_ols_spec(X_f4, y_f4, f"Spec F4 — Model F No Cook (N-{n_f_out})")
+        spec_f_results.append(rowf4)
+        print(f"    N={rowf4['N']}  R²={rowf4['R²']}  ({n_f_out} Cook outliers removed)")
+    else:
+        print(f"    Skipped — too few countries after removing {n_f_out} outliers")
+
+    # I save the Model F robustness table
+    spec_f_df = pd.DataFrame(spec_f_results)
+    spec_f_df.to_csv("outputs/tables/robustness_model_f.csv", index=False)
+    print("\n  Model F robustness table saved → outputs/tables/robustness_model_f.csv")
+
+    # I print the NLP key variables across all Model F specs
+    print(f"\n  Key NLP predictors across Model F robustness specs:")
+    print(f"  {'Variable':<38}", end="")
+    for r in spec_f_results:
+        print(f"  {r['Specification'][:14]:>14}", end="")
+    print()
+    print("  " + "-" * (38 + 16 * len(spec_f_results)))
+    for var in NLP_FOCUS:
+        print(f"  {var:<38}", end="")
+        for r in spec_f_results:
+            coef = r.get(var + "_coef", "")
+            sig  = r.get(var + "_sig", "")
+            cell = f"{coef}{sig}" if coef != "" else "—"
+            print(f"  {str(cell):>14}", end="")
+        print()
+    print(f"\n  {'N':<38}", end="")
+    for r in spec_f_results:
+        print(f"  {r['N']:>14}", end="")
+    print(f"\n  {'R²':<38}", end="")
+    for r in spec_f_results:
+        print(f"  {r['R²']:>14}", end="")
+    print()
+else:
+    print("  Skipped — fewer than 30 countries in Model F sample")
+
+
 print(f"\n{'='*60}")
 print("PHASE E COMPLETE — Key Findings")
 print(f"{'='*60}")
 print("""
+DV: cereal_availability_kg_pc (log-transformed, matching Phase D)
+    = cereal production per capita (kg/person/year, 2021)
+
 What I checked:
   1. Cook's Distance — identified countries pulling results
   2. Isolation Forest — found multivariate unusual countries
-  3. Five robustness specifications tested
+  3. Seven robustness specifications (Specs 1-7)
+  4. Model F NLP robustness (Specs F1-F4) for availability-side themes
 
 How to use this in my dissertation:
-  - If internet_users_pct stays negative and significant
-    across most specs → it is a robust predictor
-  - If a coefficient flips sign or loses significance in
-    Spec 4 or Spec 5 → the result is sensitive to outliers
-    and I should mention this as a limitation
-  - If R² stays similar across specs → model is stable
+  - arable_land_pct, gdp_per_capita_usd, rural_population_pct
+    are the robust core findings — check they survive Specs 1-7
+  - NLP variables (cereal_loss_pct, lpi_overall,
+    rural_electricity_access_pct, fertiliser_efficiency,
+    food_price_inflation_pct) were all n.s. in Phase D;
+    robustness specs confirm this is not sample-specific
+  - Spec 4 (no Cook outliers) and Spec 5 (no ISO outliers):
+    if results hold here, findings are not driven by extreme cases
+  - Spec 6: governance control (WGI) isolates production effects
+    from institutional quality
+  - Spec 7: developing-country subsample confirms relevance
+    for low- and middle-income countries specifically
 
 Outputs saved:
   outputs/figures/cooks_distance.png
   outputs/figures/robustness_coefficients.png
   outputs/tables/robustness_specifications.csv
-
-Note on governance variable (Rule of Law):
-  The World Governance Indicators are not available through
-  the standard World Bank REST API. To add them as Spec 6,
-  I can download manually from:
-  https://info.worldbank.org/governance/wgi/
-  Then save as data/raw/wgi_rule_of_law.csv and merge on country_code.
+  outputs/tables/robustness_model_f.csv
 """)

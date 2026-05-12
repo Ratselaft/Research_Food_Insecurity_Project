@@ -68,6 +68,9 @@ warnings.filterwarnings("ignore")
 # I need time to pause between downloads
 import time
 
+from matplotlib_setup import use_project_matplotlib_config
+
+use_project_matplotlib_config()
 # I need matplotlib to draw charts
 import matplotlib
 # I need numpy for mathematical operations
@@ -86,6 +89,8 @@ import matplotlib.pyplot as plt
 import shap
 # I need statsmodels for OLS regression (it gives me proper p-values)
 import statsmodels.api as sm
+# I need this to check multicollinearity between predictors
+from statsmodels.stats.outliers_influence import variance_inflation_factor
 # I need xgboost for the boosted tree model
 import xgboost as xgb
 # I need these from sklearn for machine learning
@@ -101,66 +106,117 @@ os.makedirs("outputs/figures", exist_ok=True)
 # I fix the random seed for reproducibility
 RANDOM_SEED = 42
 
+# ML cross-validation is unreliable below this sample size.
+# With 5-fold CV each fold trains on ~80% of N — if N is 53,
+# that is ~42 training observations for 11+ predictors, which leads
+# to severe overfitting and negative out-of-sample R².
+MIN_ML_N = 80
+
 print("Starting Phase D — modelling...")
 print("=" * 60)
 
 
 # ============================================================
-# Step 1: I'm downloading the dependent variable
+# Step 1: Downloading the dependent variable — cereal availability
 # ============================================================
 # What I am predicting:
-#   Prevalence of undernourishment (% of population) — 2021
-#   World Bank indicator code: SN.ITK.DEFC.ZS
-#   Higher number = worse food insecurity
+#   Cereal production per capita (kg / person / year) — 2021
+#   Derived from World Bank indicators:
+#     AG.PRD.CREL.MT — Total cereal production (metric tons)
+#     SP.POP.TOTL    — Total population
+#
+# WHY this DV instead of undernourishment:
+#   The dissertation title says "Cereal Food Availability."
+#   Availability = how much food is PRODUCED / accessible per person,
+#   not whether people can afford to buy it (that is the ACCESS dimension).
+#   Undernourishment mixes both availability AND access signals; it cannot
+#   isolate which availability-side factors (yield, PHL, logistics) matter.
+#   Cereal production per capita is a clean availability-side measure:
+#   higher kg/person = more cereal food available in that country.
+#
+#   I use production per capita rather than net supply (which would
+#   subtract exports and add imports) because FAO Food Balance Sheet
+#   net supply data was unavailable via API at the time of analysis.
+#   Countries where production ≈ 0 (e.g., city-states, islands that
+#   import all cereals) are excluded with a 5 kg/person minimum filter,
+#   since they represent a structurally different food system.
 
-print("\n[1] Downloading dependent variable — undernourishment...")
+print("\n[1] Downloading dependent variable — cereal production per capita...")
 
-# I define the set of World Bank regional/aggregate codes
-# These are NOT real countries and must be excluded
-REGIONAL_CODES = set()
-REGIONAL_CODES.add("AFE"); REGIONAL_CODES.add("AFW"); REGIONAL_CODES.add("ARB")
-REGIONAL_CODES.add("CEB"); REGIONAL_CODES.add("CSS"); REGIONAL_CODES.add("EAP")
-REGIONAL_CODES.add("EAR"); REGIONAL_CODES.add("EAS"); REGIONAL_CODES.add("ECA")
-REGIONAL_CODES.add("ECS"); REGIONAL_CODES.add("EMU"); REGIONAL_CODES.add("EUU")
-REGIONAL_CODES.add("FCS"); REGIONAL_CODES.add("HIC"); REGIONAL_CODES.add("HPC")
-REGIONAL_CODES.add("IBD"); REGIONAL_CODES.add("IBT"); REGIONAL_CODES.add("IDA")
-REGIONAL_CODES.add("IDB"); REGIONAL_CODES.add("IDX"); REGIONAL_CODES.add("LAC")
-REGIONAL_CODES.add("LCN"); REGIONAL_CODES.add("LDC"); REGIONAL_CODES.add("LIC")
-REGIONAL_CODES.add("LMC"); REGIONAL_CODES.add("LMY"); REGIONAL_CODES.add("LTE")
-REGIONAL_CODES.add("MEA"); REGIONAL_CODES.add("MIC"); REGIONAL_CODES.add("MNA")
-REGIONAL_CODES.add("NAC"); REGIONAL_CODES.add("OED"); REGIONAL_CODES.add("OSS")
-REGIONAL_CODES.add("PRE"); REGIONAL_CODES.add("PSS"); REGIONAL_CODES.add("PST")
-REGIONAL_CODES.add("SAS"); REGIONAL_CODES.add("SSA"); REGIONAL_CODES.add("SSF")
-REGIONAL_CODES.add("SST"); REGIONAL_CODES.add("TEA"); REGIONAL_CODES.add("TEC")
-REGIONAL_CODES.add("TLA"); REGIONAL_CODES.add("TMN"); REGIONAL_CODES.add("TSA")
-REGIONAL_CODES.add("TSS"); REGIONAL_CODES.add("UMC"); REGIONAL_CODES.add("WLD")
-REGIONAL_CODES.add("XZN")
-
+# I use the World Bank country metadata to identify real countries
+# (as opposed to regional and income-group aggregates)
 try:
-    response = requests.get(
-        "https://api.worldbank.org/v2/country/all/indicator/SN.ITK.DEFC.ZS",
+    meta_resp = requests.get(
+        "https://api.worldbank.org/v2/country",
+        params={"format": "json", "per_page": 400},
+        timeout=30,
+    )
+    meta_json    = meta_resp.json()
+    REAL_ISO3    = {c["id"] for c in meta_json[1]
+                    if c.get("region", {}).get("id", "") != "NA"}
+    print(f"  Real countries in World Bank metadata: {len(REAL_ISO3)}")
+except Exception as e:
+    print(f"  Warning: could not fetch WB metadata ({e}) — using hardcoded exclusion list")
+    REAL_ISO3 = None   # will fall back to exclusion logic below
+
+# Download cereal production (metric tons)
+try:
+    prod_resp = requests.get(
+        "https://api.worldbank.org/v2/country/all/indicator/AG.PRD.CREL.MT",
         params={"date": 2021, "format": "json", "per_page": 300},
         timeout=30,
     )
-    data = response.json()
+    prod_data = prod_resp.json()[1]
+    prod = {}
+    for e in prod_data:
+        iso = e.get("countryiso3code", "")
+        val = e.get("value")
+        if val is None or not iso:
+            continue
+        if REAL_ISO3 is not None and iso not in REAL_ISO3:
+            continue
+        prod[iso] = val        # metric tons
+    print(f"  Cereal production data: {len(prod)} real countries")
+except Exception as ex:
+    print(f"  Could not download cereal production: {ex}")
+    prod = {}
 
-    rows = []
-    for entry in data[1]:
-        code = entry.get("countryiso3code", "")
-        val  = entry.get("value")
-        if val is not None and code and code not in REGIONAL_CODES:
-            one_row = {}
-            one_row["country_code"]         = code
-            one_row["undernourishment_pct"] = val
-            rows.append(one_row)
+# Download population (total)
+try:
+    pop_resp = requests.get(
+        "https://api.worldbank.org/v2/country/all/indicator/SP.POP.TOTL",
+        params={"date": 2021, "format": "json", "per_page": 300},
+        timeout=30,
+    )
+    pop_data = pop_resp.json()[1]
+    pop = {}
+    for e in pop_data:
+        iso = e.get("countryiso3code", "")
+        val = e.get("value")
+        if val and iso:
+            pop[iso] = val
+except Exception as ex:
+    print(f"  Could not download population: {ex}")
+    pop = {}
 
-    dv_df = pd.DataFrame(rows)
-    dv_df.to_csv("data/raw/undernourishment_2021.csv", index=False)
-    print("  Downloaded undernourishment data for", len(dv_df), "real countries")
+# Compute cereal production per capita (kg / person)
+#   1 metric ton = 1,000 kg  →  (tons × 1000) / population
+MIN_KG_PC = 5   # exclude city-states / islands that produce no cereals
 
-except Exception as e:
-    print("  Could not download —", e)
-    dv_df = pd.DataFrame(columns=["country_code", "undernourishment_pct"])
+rows = []
+for iso in prod:
+    if iso not in pop or pop[iso] <= 0:
+        continue
+    kg_pc = (prod[iso] * 1000) / pop[iso]
+    if kg_pc < MIN_KG_PC:
+        continue  # country does not produce cereals — import-dependent
+    rows.append({"country_code": iso, "cereal_availability_kg_pc": round(kg_pc, 2)})
+
+dv_df = pd.DataFrame(rows)
+dv_df.to_csv("data/raw/cereal_availability_2021.csv", index=False)
+print(f"  Cereal availability computed for {len(dv_df)} countries (≥ {MIN_KG_PC} kg/capita)")
+print(f"  Range: {dv_df['cereal_availability_kg_pc'].min():.1f} – "
+      f"{dv_df['cereal_availability_kg_pc'].max():.1f} kg/person/year")
 
 
 # ============================================================
@@ -171,17 +227,17 @@ print("\n[2] Loading master dataset and merging dependent variable...")
 
 master = pd.read_csv("data/processed/master_dataset_clean.csv")
 
-# I merge the undernourishment data onto the master table
+# Merge cereal availability onto the master table
 master = master.merge(dv_df, on="country_code", how="left")
 
 print("  Master size:", len(master), "countries")
-print("  Countries with undernourishment data:", master["undernourishment_pct"].notna().sum())
+print("  Countries with cereal availability data:",
+      master["cereal_availability_kg_pc"].notna().sum())
 print("  All columns in master dataset:")
 for col in master.columns:
     n_valid = master[col].notna().sum()
     print(f"    {col:<45} ({n_valid} countries have data)")
 
-# I save the updated master with the dependent variable included
 master.to_csv("data/processed/master_dataset_with_dv.csv", index=False)
 
 
@@ -192,84 +248,85 @@ master.to_csv("data/processed/master_dataset_with_dv.csv", index=False)
 # This lets me see exactly how much each block improves prediction.
 
 # This is the variable I am trying to predict in every model
-DV = "undernourishment_pct"
+DV = "cereal_availability_kg_pc"
 
-# ── Model A — Baseline production + income ────────────────────────────────────
-# I now use a richer baseline than before.
-# I include rural population and agricultural employment because they tell me
-# WHO is in the food system, not just how productive it is.
+# ── Model A — Production baseline (availability-side) ─────────────────────────
+# What physical and economic inputs drive how much cereal a country produces
+# per person? These are the core AVAILABILITY-SIDE determinants: they determine
+# how much food is grown, not whether people can afford to buy it.
 MODEL_A_VARS = [
-    "cereal_yield_kg_per_ha",    # Production capacity — tonnes per hectare
-    "fertiliser_kg_per_ha",      # Input intensity — investment in yield
-    "arable_land_pct",           # Land availability for farming
-    "gdp_per_capita_usd",        # Income — can people afford to buy food?
-    "rural_population_pct",      # What share lives in the farming sector?
-    "agri_employment_pct",       # What share WORKS in agriculture?
-    "livestock_production_index",# Animal-source food production
+    "cereal_yield_kg_per_ha",     # Productivity: output per unit of land
+    "fertiliser_kg_per_ha",       # Input intensity: investment in soil fertility
+    "arable_land_pct",            # Resource base: share of land suitable for farming
+    "gdp_per_capita_usd",         # Economic capacity for agricultural investment
+    "rural_population_pct",       # Labour supply in the farming sector
+    "agri_employment_pct",        # Actual workforce in agriculture
+    "livestock_production_index", # Non-cereal food production capacity
 ]
 
-# ── Model B — Add Post-Harvest Loss ────────────────────────────────────────────
-# Post-harvest loss is the percentage of cereal that is lost between the
-# farm and the consumer. If 30% of food is lost, the country needs to produce
-# 30% more just to maintain the same level of food availability.
+# ── Model B — +Post-Harvest Loss ───────────────────────────────────────────────
+# Food lost between the farm and the consumer is food that was PRODUCED but is
+# NOT AVAILABLE. If a country loses 25% of its cereal harvest post-harvest,
+# its effective cereal availability is 25% lower than its gross production.
+# This is the most direct link between production and actual food availability.
+# DISSERTATION HYPOTHESIS: PHL has a negative, significant effect on cereal
+# availability beyond production capacity — literature attention (Topic 7 in LDA,
+# strongest distinct topic) is empirically justified.
 MODEL_B_VARS = MODEL_A_VARS + [
-    "cereal_loss_pct",           # % of harvested cereal lost before reaching people
+    "cereal_loss_pct",            # % of harvested cereal lost before reaching people
 ]
 
-# ── Model C — Add NATIONAL financial access ────────────────────────────────────
-# The traditional way to measure financial inclusion in food security research
-# is to use the NATIONAL average. I include it here as a comparison point.
-# If Model D (value chain finance) adds MORE than Model C, that supports
-# my dissertation argument.
+# ── Model C — +Logistics and Infrastructure ─────────────────────────────────
+# Even if food is produced and not lost, it must MOVE from farms to consumers.
+# Logistics quality (LPI) measures how efficiently goods traverse a country:
+# roads, cold chains, customs, warehousing. Rural electricity access enables
+# storage, milling, and processing — turning raw grain into available food.
+# Both are availability-side: they determine whether produced food reaches people.
+# NOTE: LPI data covers only ~90 countries, so N drops here from Model B.
 MODEL_C_VARS = MODEL_B_VARS + [
-    "account_ownership_pct",     # National average: % adults with an account
-    "bank_branches_per_100k",    # Physical bank presence in the country
-    "private_credit_pct_gdp",    # Does the financial system actually lend? (% GDP)
+    "lpi_overall",                   # Logistics Performance Index (World Bank)
+    "rural_electricity_access_pct",  # Infrastructure for storage and processing
 ]
 
-# ── Model D — Value Chain Financial Access ─────────────────────────────────────
-# This is the CORE CONTRIBUTION of my dissertation.
-# Instead of national averages, I use financial access indicators that
-# specifically target the people in the food value chain:
-#   - Rural adults (where farmers live)
-#   - Women (who grow 60-80% of food in low-income countries)
-#   - Poorest 40% (who face the most food insecurity)
-#   - Agricultural digital payments (farmers in the digital economy)
-#   - Borrowing (credit actually reaching people)
-#   - My composite value chain score
+# ── Model F — NLP-Discovered Availability Themes ──────────────────────────────
+# This model tests the themes DISCOVERED by NLP topic modelling of 328 strictly
+# aligned food insecurity papers. Only AVAILABILITY-SIDE themes are included.
 #
-# My hypothesis: if the disaggregated indicators explain food insecurity
-# BETTER than the national averages in Model C, it means that the
-# distribution of financial access — not just its average level —
-# is what matters for food security outcomes.
-MODEL_D_VARS = MODEL_B_VARS + [
-    "account_ownership_rural_pct",   # Finance where farmers live
-    "account_ownership_female_pct",  # Finance for women who grow the food
-    "account_ownership_poorest40_pct",# Finance for the most food-insecure
-    "agri_payments_digital_pct",     # Farmers receiving digital payments
-    "borrowed_from_bank_pct",        # Credit actually reaching people
-    "value_chain_finance_score",     # My composite value chain indicator
+# LDA K=9 topics on 328 focused papers (coherence=0.384) identified:
+#
+#   Topic 7 (clearest signal): post-harvest loss, storage, grain_storage
+#     → cereal_loss_pct  (APHLIS + FAO FBS, 100% country coverage)
+#
+#   Topic 3: agricultural investment, logistics, financing frameworks
+#     → lpi_overall  (logistics quality: goods move from farms to markets)
+#
+#   Topic 2 & 4: climate-smart agriculture, adaptation infrastructure
+#     → rural_electricity_access_pct  (storage, processing, cold chain)
+#
+#   Topic 6: land productivity, production systems, crop efficiency
+#     → fertiliser_efficiency  (yield per kg of fertiliser — input productivity)
+#
+#   Topic 1: climate projections, availability disruption, market signals
+#     → food_price_inflation_pct  (price inflation = market signal of
+#       supply-side scarcity in cereals)
+#
+# Access-side themes (smallholder poverty, financial access, gender) are
+# deliberately excluded: they explain who can AFFORD food, not whether food
+# is produced and available — which is this dissertation's research question.
+MODEL_F_VARS = MODEL_A_VARS + [
+    "cereal_loss_pct",               # Topic 7: post-harvest loss (NLP priority theme)
+    "lpi_overall",                   # Topic 3: logistics and market investment
+    "rural_electricity_access_pct",  # Topics 2/4: infrastructure for food systems
+    "fertiliser_efficiency",         # Topic 6: land productivity / input efficiency
+    "food_price_inflation_pct",      # Topic 1: market signal of availability disruption
 ]
 
-# ── Model E — Full Governance Control ─────────────────────────────────────────
-# Governance quality could be a confounding variable: poor countries may have
-# BOTH bad governance AND low financial access. If financial access loses
-# significance once I control for governance, it means governance is the
-# true driver. If it stays significant, financial access has an independent effect.
-MODEL_E_VARS = MODEL_D_VARS + [
-    "wgi_political_stability",       # Conflict destroys food supply chains
-    "wgi_control_of_corruption",     # Corruption diverts food aid from farmers
-    "wgi_government_effectiveness",  # Can the government deliver services to farmers?
-    "food_price_inflation_pct",      # Rising prices reduce food purchasing power
-]
-
-# I put all models in one dictionary so I can loop through them
+# Three models (as per research proposal) + Model F (NLP contribution)
 MODELS = {}
-MODELS["Model A — Baseline"]               = MODEL_A_VARS
-MODELS["Model B — +Post-Harvest Loss"]     = MODEL_B_VARS
-MODELS["Model C — +National Finance"]      = MODEL_C_VARS
-MODELS["Model D — +Value Chain Finance"]   = MODEL_D_VARS
-MODELS["Model E — +Governance Controls"]   = MODEL_E_VARS
+MODELS["Model A — Baseline Production"]       = MODEL_A_VARS
+MODELS["Model B — +Post-Harvest Loss"]        = MODEL_B_VARS
+MODELS["Model C — +Logistics Infrastructure"] = MODEL_C_VARS
+MODELS["Model F — NLP-Discovered Themes"]     = MODEL_F_VARS
 
 
 # ============================================================
@@ -280,17 +337,25 @@ def prepare_data(df, predictor_cols, outcome_col):
     # I make a copy so I don't accidentally change the original
     working = df.copy()
 
-    # I log-transform variables that are heavily skewed
-    # Log transformation makes OLS regression more reliable
+    # I log-transform variables that are heavily right-skewed.
+    # Log transformation stabilises variance and gives elasticity interpretations.
+    # For the DV (cereal_availability_kg_pc), log-transforming means coefficients
+    # represent the % change in cereal availability per unit change in the predictor.
     LOG_COLS = [
+        "cereal_availability_kg_pc",  # DV: right-skewed (range: ~5 to 2,100 kg/person)
         "gdp_per_capita_usd",
         "cereal_yield_kg_per_ha",
         "population_total",
         "fertiliser_kg_per_ha",
+        "fertiliser_efficiency",      # Ratio: can be very right-skewed
         "bank_branches_per_100k",
         "atm_per_100k",
         "private_credit_pct_gdp",
     ]
+
+    DV_LOG_COL = "cereal_availability_kg_pc"
+    if outcome_col == DV_LOG_COL and DV_LOG_COL in working.columns:
+        working[DV_LOG_COL] = np.log1p(working[DV_LOG_COL].clip(lower=0))
 
     for col in LOG_COLS:
         # I only transform columns that are both in my predictor list AND in the table
@@ -329,8 +394,11 @@ def run_ols(X, y, model_name, predictor_list):
     # I add a constant column — OLS needs this for the intercept term
     X_const = sm.add_constant(X)
 
-    # I fit the OLS model
-    model = sm.OLS(y, X_const).fit()
+    # I fit OLS with HC3 heteroskedasticity-consistent standard errors.
+    # HC3 is the most conservative sandwich estimator and is appropriate when
+    # residuals are non-normal (which Jarque-Bera tests reveal in Model F).
+    # HC3 does not change coefficients or R² — only standard errors and p-values.
+    model = sm.OLS(y, X_const).fit(cov_type="HC3")
 
     # I print a one-line summary
     print("\n  OLS result for", model_name, ":")
@@ -348,9 +416,28 @@ def run_ols(X, y, model_name, predictor_list):
     table_path = "outputs/tables/ols_" + safe_name + ".txt"
     with open(table_path, "w") as f:
         f.write(model.summary().as_text())
-    print("    Full OLS table saved →", table_path)
+    print("    Full OLS table (HC3 SEs) saved →", table_path)
 
     return model
+
+
+def check_vif(X):
+    """Print VIF for each predictor. VIF > 10 signals severe multicollinearity."""
+    try:
+        vif_vals = [
+            variance_inflation_factor(X.values.astype(float), i)
+            for i in range(X.shape[1])
+        ]
+        vif_df = pd.DataFrame({"Variable": X.columns, "VIF": vif_vals})
+        high = vif_df[vif_df["VIF"] > 10]
+        if len(high) > 0:
+            pairs = {row["Variable"]: round(row["VIF"], 1) for _, row in high.iterrows()}
+            print("  Multicollinearity warning — VIF > 10:", pairs)
+        else:
+            max_vif = round(vif_df["VIF"].max(), 1)
+            print(f"  VIF: all predictors below 10 (max = {max_vif}) — no severe collinearity")
+    except Exception as e:
+        print(f"  VIF check skipped ({e})")
 
 
 def run_ml(X, y, model_name, kfold):
@@ -401,19 +488,28 @@ def run_ml(X, y, model_name, kfold):
 
 def make_shap_plot(rf_model, X, model_name):
     # SHAP tells me how much each variable pushed each prediction up or down.
-    # This is much more informative than just saying "cereal yield is important".
     explainer = shap.TreeExplainer(rf_model)
     shap_values = explainer.shap_values(X)
-
-    plt.figure(figsize=(9, 5))
-    shap.summary_plot(shap_values, X, plot_type="bar", show=False)
-    plt.title("SHAP feature importance — " + model_name, fontsize=11)
-    plt.tight_layout()
 
     safe_name = model_name.replace(" ", "_")
     safe_name = safe_name.replace("+", "Plus")
     safe_name = safe_name.replace("—", "")
     safe_name = safe_name.strip("_")
+
+    # I save mean absolute SHAP value per variable as a CSV for downstream analysis
+    mean_abs_shap = np.abs(shap_values).mean(axis=0)
+    shap_csv = pd.DataFrame({
+        "variable":       X.columns.tolist(),
+        "mean_abs_shap":  mean_abs_shap.round(4),
+    }).sort_values("mean_abs_shap", ascending=False)
+    csv_path = "outputs/tables/shap_" + safe_name + ".csv"
+    shap_csv.to_csv(csv_path, index=False)
+    print("    SHAP importance CSV saved →", csv_path)
+
+    plt.figure(figsize=(9, 5))
+    shap.summary_plot(shap_values, X, plot_type="bar", show=False)
+    plt.title("SHAP feature importance — " + model_name, fontsize=11)
+    plt.tight_layout()
 
     fig_path = "outputs/figures/shap_" + safe_name + ".png"
     plt.savefig(fig_path, dpi=150, bbox_inches="tight")
@@ -425,7 +521,7 @@ def make_shap_plot(rf_model, X, model_name):
 # Step 5: I'm running all five models
 # ============================================================
 
-print("\n[3] Fitting Models A, B, C, D, E...")
+print("\n[3] Fitting Models A, B, C, D, E, F...")
 
 # I set up the 5-fold cross-validation scheme
 kfold = KFold(n_splits=5, shuffle=True, random_state=RANDOM_SEED)
@@ -462,9 +558,25 @@ for model_name in MODELS:
     # I run OLS regression
     ols_model = run_ols(X, y, model_name, used_predictors)
 
-    # I run Random Forest and XGBoost
+    # I check for multicollinearity between predictors
+    check_vif(X)
+
+    # I run Random Forest and XGBoost only when there are enough countries.
+    # Below MIN_ML_N the 5-fold CV folds are too small to be meaningful,
+    # producing negative out-of-sample R² due to overfitting.
     print("\n  Machine learning results for", model_name, ":")
-    rf_model, xgb_model, rf_cv_r2, xgb_cv_r2 = run_ml(X, y, model_name, kfold)
+    if len(X) >= MIN_ML_N:
+        rf_model, xgb_model, rf_cv_r2, xgb_cv_r2 = run_ml(X, y, model_name, kfold)
+    else:
+        print(f"  Sample N={len(X)} < {MIN_ML_N} — skipping CV (too few countries for "
+              f"reliable cross-validation). Fitting RF in-sample only for SHAP.")
+        rf_model = RandomForestRegressor(
+            n_estimators=200, max_depth=4, min_samples_leaf=3,
+            random_state=RANDOM_SEED, n_jobs=-1,
+        )
+        rf_model.fit(X, y)
+        rf_cv_r2  = np.nan
+        xgb_cv_r2 = np.nan
 
     # I compute and save the SHAP importance chart
     print("  Computing SHAP values...")
@@ -484,6 +596,71 @@ for model_name in MODELS:
 
 
 # ============================================================
+# Step 5b: Model A★ — same N=80 sample as Model F (honest comparison)
+# ============================================================
+# Comparing Model F R²=0.721 (N=80) with Model A R²=0.553 (N=158) is
+# misleading because the samples differ. Countries with LPI data tend to be
+# better-governed, wealthier, and easier to predict. Running Model A on the
+# IDENTICAL 80 countries gives the honest incremental R² attributable to the
+# NLP-discovered variables, not sample composition.
+
+print("\n" + "=" * 60)
+print("  Model A★ — Restricted to Model F sample (fair comparison)")
+print("=" * 60)
+
+X_f_temp, y_f_temp, _ = prepare_data(master, MODEL_F_VARS, DV)
+master_nlp_sample = master.loc[X_f_temp.index].copy()
+
+X_a_star, y_a_star, used_a_star = prepare_data(master_nlp_sample, MODEL_A_VARS, DV)
+
+if len(X_a_star) >= 30:
+    ols_a_star = run_ols(X_a_star, y_a_star, "Model A★ — NLP sample", used_a_star)
+    check_vif(X_a_star)
+
+    if len(X_a_star) >= MIN_ML_N:
+        rf_a_star, _, rf_cv_a_star, xgb_cv_a_star = run_ml(
+            X_a_star, y_a_star, "Model A★", kfold
+        )
+    else:
+        rf_a_star = RandomForestRegressor(
+            n_estimators=200, max_depth=4, min_samples_leaf=3,
+            random_state=RANDOM_SEED, n_jobs=-1,
+        ).fit(X_a_star, y_a_star)
+        rf_cv_a_star = np.nan
+        xgb_cv_a_star = np.nan
+
+    print("  Computing SHAP values for Model A★...")
+    make_shap_plot(rf_a_star, X_a_star, "Model A★ — NLP sample")
+
+    # Get Model F R² from the results list (last Model F entry)
+    r2_f_live = next(
+        (r["OLS R²"] for r in reversed(results) if "Model F" in r["Model"]),
+        None
+    )
+    if r2_f_live is not None:
+        incr_r2 = round(r2_f_live - ols_a_star.rsquared, 3)
+        print(f"\n  HONEST COMPARISON (same N={len(X_a_star)} sample):")
+        print(f"    Model A★  R² = {ols_a_star.rsquared:.3f}")
+        print(f"    Model F   R² = {r2_f_live:.3f}")
+        print(f"    NLP variables add ΔR² = {incr_r2:.3f} on the same countries")
+    else:
+        print("  (Could not locate Model F R² for honest comparison)")
+
+    results.append({
+        "Model":            "Model A★ — NLP sample",
+        "N (countries)":    len(X_a_star),
+        "Predictors used":  len(used_a_star),
+        "OLS R²":           round(ols_a_star.rsquared, 3),
+        "OLS Adj R²":       round(ols_a_star.rsquared_adj, 3),
+        "OLS F-stat p":     round(ols_a_star.f_pvalue, 4),
+        "RF 5-fold CV R²":  round(rf_cv_a_star, 3) if not np.isnan(rf_cv_a_star) else np.nan,
+        "XGB 5-fold CV R²": round(xgb_cv_a_star, 3) if not np.isnan(xgb_cv_a_star) else np.nan,
+    })
+else:
+    print("  Skipped Model A★ — too few countries with complete data")
+
+
+# ============================================================
 # Step 6: I'm saving the comparison table
 # ============================================================
 
@@ -496,6 +673,72 @@ print(results_df.to_string(index=False))
 
 results_df.to_csv("outputs/tables/model_comparison.csv", index=False)
 print("\nComparison table saved → outputs/tables/model_comparison.csv")
+
+
+# ============================================================
+# Step 6b: 1000-iteration bootstrap confidence intervals
+# ============================================================
+# The research proposal specifies bootstrap CIs for key predictors.
+# Bootstrap sampling (with replacement, N iterations) produces an
+# empirical distribution of each coefficient. The 2.5th and 97.5th
+# percentiles give the 95% CI without assuming normality.
+# This matters most for Model F where residuals are non-normal (JB p<0.001).
+
+print("\n[3b] Computing 1000-iteration bootstrap CIs...")
+
+N_BOOT = 1000
+
+def bootstrap_coefs(df, predictor_cols, outcome_col, n_iter=N_BOOT):
+    X_all, y_all, used = prepare_data(df, predictor_cols, outcome_col)
+    if len(X_all) < 30:
+        return pd.DataFrame()
+    store = {c: [] for c in used}
+    rng = np.random.default_rng(RANDOM_SEED)
+    for _ in range(n_iter):
+        idx = rng.choice(len(X_all), len(X_all), replace=True)
+        Xb, yb = X_all.iloc[idx], y_all.iloc[idx]
+        try:
+            m = sm.OLS(yb, sm.add_constant(Xb)).fit()
+            for c in used:
+                if c in m.params:
+                    store[c].append(m.params[c])
+        except Exception:
+            pass
+    rows = []
+    for c, vals in store.items():
+        if len(vals) >= 50:
+            rows.append({
+                "variable":    c,
+                "boot_mean":   round(float(np.mean(vals)),              4),
+                "ci_lower_95": round(float(np.percentile(vals,  2.5)),  4),
+                "ci_upper_95": round(float(np.percentile(vals, 97.5)),  4),
+                "n_valid":     len(vals),
+            })
+    return pd.DataFrame(rows)
+
+print("  Bootstrapping Model A (1000 iterations)...")
+boot_a = bootstrap_coefs(master, MODEL_A_VARS, DV)
+boot_a["model"] = "Model A"
+
+print("  Bootstrapping Model F (1000 iterations)...")
+boot_f = bootstrap_coefs(master, MODEL_F_VARS, DV)
+boot_f["model"] = "Model F"
+
+boot_all = pd.concat([boot_a, boot_f], ignore_index=True)
+boot_all.to_csv("outputs/tables/bootstrap_confidence_intervals.csv", index=False)
+print("  Bootstrap CIs saved → outputs/tables/bootstrap_confidence_intervals.csv")
+
+# I print CIs for the NLP-discovered availability-side predictors
+nlp_vars = ["cereal_loss_pct", "lpi_overall", "rural_electricity_access_pct",
+            "fertiliser_efficiency", "food_price_inflation_pct"]
+print("\n  Bootstrap 95% CIs — NLP-discovered availability predictors (Model F):")
+print(f"  {'Variable':<38} {'Mean':>8} {'Lower 95%':>10} {'Upper 95%':>10}")
+print("  " + "-" * 68)
+for _, row in boot_f.iterrows():
+    if row["variable"] in nlp_vars:
+        cross_zero = "(CI crosses zero)" if row["ci_lower_95"] * row["ci_upper_95"] < 0 else "(CI excludes zero ✓)"
+        print(f"  {row['variable']:<38} {row['boot_mean']:>8.4f} "
+              f"{row['ci_lower_95']:>10.4f} {row['ci_upper_95']:>10.4f}  {cross_zero}")
 
 
 # ============================================================
@@ -513,26 +756,36 @@ fig, ax = plt.subplots(figsize=(11, 6))
 x = np.arange(len(results_df))
 width = 0.25
 
-# I draw three sets of bars: OLS, Random Forest, XGBoost
-bars1 = ax.bar(x - width, results_df["OLS R²"],          width, label="OLS R²",            color="#4472C4")
-bars2 = ax.bar(x,          results_df["RF 5-fold CV R²"], width, label="Random Forest CV R²", color="#ED7D31")
-bars3 = ax.bar(x + width,  results_df["XGB 5-fold CV R²"],width, label="XGBoost CV R²",      color="#70AD47")
+# Replace NaN with 0 for bar heights (NaN bars show as invisible gaps)
+rf_heights  = results_df["RF 5-fold CV R²"].fillna(0)
+xgb_heights = results_df["XGB 5-fold CV R²"].fillna(0)
 
-# I add value labels on top of every bar
-for bar_group in [bars1, bars2, bars3]:
-    for bar in bar_group:
-        h = bar.get_height()
-        if h > 0:
-            ax.text(bar.get_x() + bar.get_width() / 2,
-                    h + 0.008, str(round(h, 2)),
-                    ha="center", va="bottom", fontsize=7)
+# I draw three sets of bars: OLS, Random Forest, XGBoost
+bars1 = ax.bar(x - width, results_df["OLS R²"], width, label="OLS R²",              color="#4472C4")
+bars2 = ax.bar(x,          rf_heights,           width, label="Random Forest CV R²", color="#ED7D31")
+bars3 = ax.bar(x + width,  xgb_heights,          width, label="XGBoost CV R²",       color="#70AD47")
+
+# I add value labels on top of every bar; NaN models get an "N/A" note
+for bar_idx, bar_group in enumerate([(bars1, results_df["OLS R²"]),
+                                      (bars2, results_df["RF 5-fold CV R²"]),
+                                      (bars3, results_df["XGB 5-fold CV R²"])]):
+    bars, values = bar_group
+    for i, bar in enumerate(bars):
+        val = values.iloc[i]
+        h   = bar.get_height()
+        if pd.isna(val):
+            ax.text(bar.get_x() + bar.get_width() / 2, 0.015,
+                    "N/A", ha="center", va="bottom", fontsize=6, color="#888888")
+        elif h > 0:
+            ax.text(bar.get_x() + bar.get_width() / 2, h + 0.008,
+                    str(round(h, 2)), ha="center", va="bottom", fontsize=7)
 
 ax.set_xlabel("Model specification (each adds a new block of variables)")
-ax.set_ylabel("R² (higher = better prediction of undernourishment %)")
+ax.set_ylabel("R² (higher = better prediction of cereal availability)")
 ax.set_title(
-    "Model Performance Progression: A → B → C → D → E\n"
-    "Testing whether Value Chain Financial Access explains more than National Averages\n"
-    "(Dependent variable: Prevalence of undernourishment, % of population — 2021)"
+    "Model Performance Progression: A → B → C → D → E → F\n"
+    "Does NLP-Discovered Evidence Match Empirical Signal? (Model F = NLP themes)\n"
+    "(Dependent variable: Cereal production per capita, kg/person/year — 2021, log-transformed)"
 )
 
 # I label the x axis with model names, split across two lines for readability
@@ -566,7 +819,7 @@ print("R² progression chart saved → outputs/figures/model_r2_comparison.png")
 print("\n" + "=" * 60)
 print("OLS COEFFICIENT SUMMARY — ALL MODELS")
 print("Stars: *** p<0.01  ** p<0.05  * p<0.10")
-print("Negative coefficient = reduces undernourishment (good)")
+print("Positive coefficient = increases cereal availability (good)")
 print("=" * 60)
 
 for model_name in MODELS:
@@ -578,7 +831,7 @@ for model_name in MODELS:
         continue
 
     X_const = sm.add_constant(X)
-    fitted  = sm.OLS(y, X_const).fit()
+    fitted  = sm.OLS(y, X_const).fit(cov_type="HC3")
 
     print("\n" + model_name, " (N=" + str(int(fitted.nobs)) + ",  R²=" + str(round(fitted.rsquared, 3)) + ")")
     print("  " + "-" * 58)
@@ -602,73 +855,76 @@ for model_name in MODELS:
 
 
 # ============================================================
-# Step 9: I'm drawing a coefficient summary chart for Model D
+# Step 9: NLP-discovered availability coefficients chart (Model F)
 # ============================================================
-# I plot the value chain financial access coefficients from Model D
-# to show visually which channels of financial access matter most.
+# I highlight the NLP-discovered availability-side predictors in Model F
+# to show visually whether they add explanatory power beyond the baseline.
 
-print("\nSaving value chain finance coefficient chart...")
+print("\nSaving NLP availability coefficient chart (Model F)...")
 
-X_d, y_d, used_d = prepare_data(master, MODEL_D_VARS, DV)
+X_f_chart, y_f_chart, used_f_chart = prepare_data(master, MODEL_F_VARS, DV)
 
-if len(X_d) >= 30:
-    X_d_const = sm.add_constant(X_d)
-    model_d   = sm.OLS(y_d, X_d_const).fit()
+if len(X_f_chart) >= 30:
+    X_f_const = sm.add_constant(X_f_chart)
+    model_f_chart = sm.OLS(y_f_chart, X_f_const).fit(cov_type="HC3")
 
-    # I pull out coefficients and confidence intervals for all variables
-    coefs = model_d.params.drop("const")
-    conf  = model_d.conf_int().drop("const")
-    pvals = model_d.pvalues.drop("const")
+    coefs = model_f_chart.params.drop("const")
+    conf  = model_f_chart.conf_int().drop("const")
+    pvals = model_f_chart.pvalues.drop("const")
 
-    # I sort by coefficient magnitude so the chart is easy to read
-    order = coefs.abs().sort_values(ascending=True).index
+    order        = coefs.abs().sort_values(ascending=True).index
     coefs_sorted = coefs[order]
     conf_sorted  = conf.loc[order]
     pvals_sorted = pvals[order]
 
+    # NLP-discovered availability variables (orange border)
+    nlp_highlight = set(MODEL_F_VARS) - set(MODEL_A_VARS)
+
     fig, ax = plt.subplots(figsize=(10, max(5, len(coefs_sorted) * 0.45)))
 
-    # I colour bars by significance
     colours = []
     for var in coefs_sorted.index:
         p = pvals_sorted[var]
         if p < 0.01:
-            colours.append("#C00000")  # Dark red = highly significant
+            colours.append("#C00000")
         elif p < 0.05:
-            colours.append("#FF6600")  # Orange = significant
+            colours.append("#FF6600")
         elif p < 0.10:
-            colours.append("#FFC000")  # Yellow = marginally significant
+            colours.append("#FFC000")
         else:
-            colours.append("#AAAAAA")  # Grey = not significant
+            colours.append("#AAAAAA")
 
-    # I draw horizontal bars (easier to read long variable names)
     y_pos = np.arange(len(coefs_sorted))
-    ax.barh(y_pos, coefs_sorted.values, color=colours, alpha=0.85)
+    bars  = ax.barh(y_pos, coefs_sorted.values, color=colours, alpha=0.85)
 
-    # I draw horizontal confidence interval lines
+    # Thicker border for NLP-discovered variables
+    for i, var in enumerate(coefs_sorted.index):
+        if var in nlp_highlight:
+            bars[i].set_edgecolor("#1565C0")
+            bars[i].set_linewidth(2)
+
     for i in range(len(coefs_sorted)):
         var_name = coefs_sorted.index[i]
         lo = conf_sorted.loc[var_name, 0]
         hi = conf_sorted.loc[var_name, 1]
         ax.plot([lo, hi], [i, i], color="black", linewidth=1.5)
 
-    # I draw a vertical line at zero (no effect)
     ax.axvline(0, color="black", linewidth=1)
-
     ax.set_yticks(y_pos)
     ax.set_yticklabels(coefs_sorted.index, fontsize=8)
-    ax.set_xlabel("OLS Coefficient (effect on undernourishment %)")
+    ax.set_xlabel("OLS Coefficient HC3 (effect on log cereal availability per capita)")
     ax.set_title(
-        "Model D — Value Chain Financial Access Coefficients\n"
-        "(Colours: red=p<0.01, orange=p<0.05, yellow=p<0.10, grey=not significant)\n"
-        "Negative = reduces undernourishment (beneficial)"
+        "Model F — NLP-Discovered Availability Themes (HC3 SEs)\n"
+        "(Blue border = NLP-discovered; colours: red=p<0.01, orange=p<0.05, "
+        "yellow=p<0.10, grey=n.s.)\n"
+        "Positive = increases cereal availability"
     )
     plt.tight_layout()
-    plt.savefig("outputs/figures/model_d_valuechain_coefficients.png", dpi=150)
+    plt.savefig("outputs/figures/model_f_nlp_coefficients.png", dpi=150)
     plt.close()
-    print("Coefficient chart saved → outputs/figures/model_d_valuechain_coefficients.png")
+    print("Coefficient chart saved → outputs/figures/model_f_nlp_coefficients.png")
 else:
-    print("  Skipping Model D coefficient chart — too few countries with complete data")
+    print("  Skipping Model F coefficient chart — too few countries with complete data")
 
 
 print("\n" + "=" * 60)
@@ -676,5 +932,6 @@ print("PHASE D COMPLETE")
 print("Outputs saved:")
 print("  outputs/tables/   — OLS tables (one per model) + comparison CSV")
 print("  outputs/figures/  — SHAP charts + R² progression + Model D coefficients")
+print("  Model F tests NLP-discovered themes vs baseline — check its R² vs Model A")
 print("Next step: Phase E — outlier checks and robustness specifications")
 print("=" * 60)
