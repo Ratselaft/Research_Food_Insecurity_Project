@@ -3,7 +3,7 @@
 # ============================================================
 #
 # What I'm doing in this file:
-#   1. Loading ONLY the 328 strictly aligned food insecurity papers
+#   1. Loading ONLY the strictly aligned food-availability papers
 #      (not the full 1,545-paper corpus — noisy papers excluded)
 #   2. Cleaning text, detecting bigram phrases (e.g. "post_harvest",
 #      "climate_change", "cereal_yield") before LDA
@@ -16,9 +16,9 @@
 # Using strictly aligned papers matters because:
 #   — The full corpus (1,545 papers) included tangentially related
 #     work (e.g. aflatoxin immunoassay, potato marketing) that
-#     diluted LDA topics and produced coherence = 0.368
-#   — Restricting to 328 papers that explicitly address food insecurity
-#     gives the algorithm a focused, high-quality signal
+#     diluted LDA topics and produced weak, blended themes.
+#   — Restricting to papers that explicitly address food security AND
+#     availability-side drivers gives the algorithm a focused signal.
 # ============================================================
 
 import random
@@ -54,11 +54,11 @@ for resource_name in ['stopwords', 'wordnet', 'omw-1.4', 'punkt', 'punkt_tab']:
 
 
 # ============================================================
-# Step 1: Loading the strictly aligned corpus (328 papers)
+# Step 1: Loading the strictly aligned availability corpus
 # ============================================================
-# I load ONLY the papers that Phase A4 classified as strictly
-# aligned with food insecurity research. These 328 papers are
-# the clean signal; the remaining 1,217 were too tangential.
+# I load ONLY the papers that Phase A4 classified as strictly aligned
+# with food security AND availability-side drivers. Broad access-only
+# or nutrition-only papers are excluded from the LDA input.
 
 df = pd.read_csv('data/processed/strictly_aligned_papers.csv')
 
@@ -147,7 +147,7 @@ for b, score in top_bigrams:
 
 dictionary = corpora.Dictionary(df['tokens'])
 
-# With 328 papers:
+# With the strict availability corpus:
 #   no_below=2  → keep words appearing in at least 2 papers (not just 1)
 #   no_above=0.75 → remove words in >75% of papers (generic)
 dictionary.filter_extremes(no_below=2, no_above=0.75)
@@ -219,7 +219,7 @@ plt.axvline(best_k, color='red', linestyle='--', label=f'Selected K={best_k}')
 plt.axhline(0.60, color='green', linestyle=':', alpha=0.7, label='Target c_v = 0.60')
 plt.xlabel('Number of topics (K)')
 plt.ylabel('Coherence score (c_v)')
-plt.title('LDA coherence sweep — 328 strictly aligned food insecurity papers')
+plt.title(f'LDA coherence sweep — {len(df)} strictly aligned availability papers')
 plt.legend()
 plt.tight_layout()
 plt.savefig('outputs/figures/lda_coherence_curve.png', dpi=150)
@@ -278,6 +278,7 @@ print("\nMapping template saved → data/processed/phase_A_theme_variable_mappin
 # relative to the corpus. Combined with LDA topic membership it
 # shows WHICH words best characterise each topic.
 
+from sklearn.decomposition import NMF
 from sklearn.feature_extraction.text import TfidfVectorizer
 
 df['clean_text'] = df['tokens'].apply(lambda toks: ' '.join(toks))
@@ -333,6 +334,38 @@ for tid in range(best_k):
     top5 = topic_kw_df[topic_kw_df['topic_id'] == tid].head(5)
     print(f"  Topic {tid}: {', '.join(top5['keyword'].tolist())}")
 print("TF-IDF keywords saved → data/processed/tfidf_top_keywords.csv")
+
+if scores[best_k] < 0.60:
+    # LDA is not ideal for every corpus. When coherence is below the
+    # proposal threshold, NMF on TF-IDF gives a cleaner diagnostic set of
+    # availability-side themes without changing the raw literature corpus.
+    nmf_k = min(8, max(3, len(df) // 15))
+    nmf_model = NMF(
+        n_components=nmf_k,
+        init='nndsvda',
+        random_state=RANDOM_SEED,
+        max_iter=1000,
+    )
+    nmf_doc_topic = nmf_model.fit_transform(tfidf_matrix)
+
+    nmf_rows = []
+    for topic_id, weights in enumerate(nmf_model.components_):
+        top_idx = weights.argsort()[::-1][:15]
+        top_terms = feature_names[top_idx]
+        top_weights = weights[top_idx]
+        dominant_docs = int((nmf_doc_topic.argmax(axis=1) == topic_id).sum())
+        nmf_rows.append({
+            'topic_id': topic_id,
+            'top_keywords': ', '.join(top_terms),
+            'n_dominant_docs': dominant_docs,
+            'method': 'TF-IDF + NMF fallback',
+            'why_used': 'LDA coherence below 0.60 threshold',
+        })
+        print(f"  NMF topic {topic_id}: {', '.join(top_terms[:8])}")
+
+    nmf_df = pd.DataFrame(nmf_rows)
+    nmf_df.to_csv('data/processed/nmf_availability_topics.csv', index=False)
+    print("NMF fallback topics saved → data/processed/nmf_availability_topics.csv")
 
 print(f"\n=== Phase A3 complete. LDA coherence: {scores[best_k]} (K={best_k}) ===")
 print(f"{'SUCCESS' if scores[best_k] >= 0.60 else 'BELOW TARGET'}: target was c_v >= 0.60")

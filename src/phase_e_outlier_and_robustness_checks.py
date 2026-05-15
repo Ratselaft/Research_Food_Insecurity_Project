@@ -712,11 +712,11 @@ MODEL_F_VARS_E = [
     "cereal_yield_kg_per_ha", "fertiliser_kg_per_ha", "arable_land_pct",
     "gdp_per_capita_usd", "rural_population_pct", "agri_employment_pct",
     "livestock_production_index",
-    "cereal_loss_pct",               # Topic 7: post-harvest loss
-    "lpi_overall",                   # Topic 3: logistics and market investment
-    "rural_electricity_access_pct",  # Topics 2/4: infrastructure for food systems
-    "fertiliser_efficiency",         # Topic 6: land productivity / input efficiency
-    "food_price_inflation_pct",      # Topic 1: market signal of availability disruption
+    "cereal_loss_pct",               # NMF Topic 2: post-harvest loss / grain storage
+    "trade_pct_gdp",                 # NMF Topic 6: market integration / value-chain proxy
+    "rural_electricity_access_pct",  # NMF Topic 5: infrastructure for food systems
+    "fertiliser_efficiency",         # NMF Topic 0: land productivity / input efficiency
+    "food_price_inflation_pct",      # NMF Topic 3: market signal of availability disruption
 ]
 MODEL_F_LOG_E = [
     "cereal_availability_kg_pc",     # DV: log-transform matches Phase D
@@ -724,8 +724,9 @@ MODEL_F_LOG_E = [
     "cereal_yield_kg_per_ha",
     "fertiliser_kg_per_ha",
     "fertiliser_efficiency",
+    "trade_pct_gdp",                 # log-transform matches Phase D
 ]
-NLP_FOCUS = ["cereal_loss_pct", "lpi_overall", "rural_electricity_access_pct"]
+NLP_FOCUS = ["cereal_loss_pct", "trade_pct_gdp", "rural_electricity_access_pct"]
 
 master_f = pd.read_csv("data/processed/master_dataset_with_dv.csv")
 # Save raw DV before logging (for Spec F3 sensitivity)

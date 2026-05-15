@@ -1,0 +1,2 @@
+Test,Sample N,df1 (extra vars),df2,F statistic,p-value,Significance,Delta R²,Partial R²,Adj R² Model A*,Adj R² Model F
+Nested F-test: Model A* vs Model F,160,5,147,3.649,0.0038,***,0.089,0.11,0.157,0.224

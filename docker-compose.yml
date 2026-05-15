@@ -1,0 +1,16 @@
+services:
+  pipeline:
+    build: .
+    image: food-insecurity-pipeline:latest
+    env_file: .env                    # loads your API keys without baking them into the image
+    volumes:
+      # Mount raw data from your machine into the container.
+      # PDFs and downloaded CSVs live here; they never bloat the image.
+      - ./data/raw:/app/data/raw
+      # Mount outputs back to your machine so you can open figures/tables
+      # in Excel / Power BI after the pipeline finishes.
+      - ./outputs:/app/outputs
+      - ./data/processed:/app/data/processed
+      - ./reports:/app/reports
+    # Run just the analysis phases (C → G) without re-downloading data:
+    #   docker compose run pipeline python src/phase_c_clean_and_merge_master_dataset.py

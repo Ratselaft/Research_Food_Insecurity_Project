@@ -1,8 +1,8 @@
 variable,mean_abs_shap
-cereal_yield_kg_per_ha,0.4789
-arable_land_pct,0.3965
-gdp_per_capita_usd,0.0978
-fertiliser_kg_per_ha,0.0865
-rural_population_pct,0.0725
-livestock_production_index,0.0461
-agri_employment_pct,0.0311
+gdp_per_capita_usd,0.0897
+livestock_production_index,0.0351
+arable_land_pct,0.0258
+cereal_yield_kg_per_ha,0.0241
+agri_employment_pct,0.0169
+fertiliser_kg_per_ha,0.0096
+rural_population_pct,0.004

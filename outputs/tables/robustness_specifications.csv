@@ -1,8 +1,8 @@
 Specification,N,R²,Adj R²,cereal_yield_kg_per_ha_coef,cereal_yield_kg_per_ha_sig,fertiliser_kg_per_ha_coef,fertiliser_kg_per_ha_sig,arable_land_pct_coef,arable_land_pct_sig,gdp_per_capita_usd_coef,gdp_per_capita_usd_sig,rural_population_pct_coef,rural_population_pct_sig,agri_employment_pct_coef,agri_employment_pct_sig,livestock_production_index_coef,livestock_production_index_sig,avg_precipitation_mm_coef,avg_precipitation_mm_sig,wgi_political_stability_coef,wgi_political_stability_sig
-Spec 1 — Baseline,158,0.553,0.532,-0.796,,-1.339,**,-0.067,,-2.782,***,-0.055,,0.133,**,-0.02,,,,,
-Spec 2 — +Precipitation,154,0.556,0.532,-0.771,,-1.587,**,-0.071,*,-2.85,***,-0.055,,0.111,*,-0.011,,1.049,,,
-Spec 3 — Log DV,158,0.662,0.646,-0.104,,-0.061,,-0.005,*,-0.316,***,-0.002,,0.006,*,0.0,,,,,
-Spec 4 — No Cook outliers (N-12),146,0.639,0.62,-1.005,,-1.166,**,-0.067,**,-1.492,**,-0.037,,0.184,***,-0.018,,,,,
-Spec 5 — No ISO outliers (N-16),142,0.565,0.542,-0.776,,-1.238,*,-0.056,,-2.206,***,-0.05,,0.184,***,-0.06,,,,,
-Spec 6 — +WGI Gov,158,0.553,0.529,-0.801,,-1.335,**,-0.067,,-2.627,***,-0.052,,0.133,**,-0.021,,,,-0.302,
-Spec 7 — Developing (N=111),111,0.494,0.46,-1.219,,-0.567,,-0.091,*,-6.208,***,-0.059,,0.085,,-0.031,,,,,
+Spec 1 — Baseline,157,0.176,0.137,-0.025,,0.042,*,0.001,,-0.109,***,0.002,,-0.004,*,0.003,***,,,,
+Spec 2 — +Precipitation,153,0.255,0.214,-0.032,,0.064,***,0.001,,-0.103,***,0.002,,-0.002,,0.002,**,-0.084,***,,
+Spec 3 — Level DV,157,0.197,0.159,-4.929,,14.157,,0.241,,-43.412,***,0.675,,-1.279,,1.215,***,,,,
+Spec 4 — No Cook outliers (N-8),149,0.311,0.276,-0.031,,0.039,*,0.001,,-0.114,***,0.001,,-0.003,*,0.003,***,,,,
+Spec 5 — No ISO outliers (N-16),141,0.196,0.154,-0.045,,0.046,*,0.002,,-0.103,***,0.002,,-0.004,*,0.004,***,,,,
+Spec 6 — +WGI Gov,157,0.201,0.158,-0.026,,0.039,,0.001,,-0.069,*,0.002,,-0.004,*,0.003,***,,,-0.073,**
+Spec 7 — Developing (N=108),108,0.081,0.017,-0.014,,0.03,,0.002,,-0.053,,0.002,,-0.004,,0.002,*,,,,

@@ -1,0 +1,8 @@
+topic_id,top_keywords,n_dominant_docs,method,why_used
+0,"land, environmental, soil, crop, resource, production, water, demand, increased, mitigation, expansion, trade, environmental_impact, agriculture, future",17,TF-IDF + NMF fallback,LDA coherence below 0.60 threshold
+1,"household, determinant, income, education, rural_household, status, availability, farm_household, ethiopia, rural, livelihood, factor, regression, result, offfarm",17,TF-IDF + NMF fallback,LDA coherence below 0.60 threshold
+2,"loss, postharvest_loss, fruit_vegetable, postharvest, grain, appropriate, storage, stage, due, practice, quality, supply_chain, grain_storage, process, product",15,TF-IDF + NMF fallback,LDA coherence below 0.60 threshold
+3,"climate_change, adaptation_strategy, adaptation, impact, change, climate, farmer, yield, rainfall, temperature, ethiopia, crop, implication, affect, productivity",16,TF-IDF + NMF fallback,LDA coherence below 0.60 threshold
+4,"rice, yield, variety, silo, wheat, grain, crop, temperature, sahbhagi_dhan, region, asia, past, domestic, price, value_chain",7,TF-IDF + NMF fallback,LDA coherence below 0.60 threshold
+5,"technology, adoption, farmer, storage, investment, improved, phl, sensor, postharvest, increased, nigeria, agricultural, sap, program, method",15,TF-IDF + NMF fallback,LDA coherence below 0.60 threshold
+6,"africa, economic, production, system, waste, smallholder, value_chain, investment, social, people, institutional, better, driver, sector, especially",27,TF-IDF + NMF fallback,LDA coherence below 0.60 threshold

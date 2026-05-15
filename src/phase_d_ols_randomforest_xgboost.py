@@ -67,6 +67,11 @@ warnings.filterwarnings("ignore")
 
 # I need time to pause between downloads
 import time
+# I need these to unpack the FAOSTAT bulk ZIP in memory
+import io
+import zipfile
+# I need pycountry to convert FAO M49 codes to ISO3
+import pycountry
 
 from matplotlib_setup import use_project_matplotlib_config
 
@@ -95,6 +100,7 @@ from statsmodels.stats.outliers_influence import variance_inflation_factor
 import xgboost as xgb
 # I need these from sklearn for machine learning
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.impute import KNNImputer
 from sklearn.metrics import r2_score
 from sklearn.model_selection import KFold, cross_val_score
 from sklearn.preprocessing import StandardScaler
@@ -117,104 +123,206 @@ print("=" * 60)
 
 
 # ============================================================
-# Step 1: Downloading the dependent variable — cereal availability
+# Step 1: Downloading the dependent variable — FAO FBS cereal food supply
 # ============================================================
-# What I am predicting:
-#   Cereal production per capita (kg / person / year) — 2021
-#   Derived from World Bank indicators:
-#     AG.PRD.CREL.MT — Total cereal production (metric tons)
-#     SP.POP.TOTL    — Total population
+# Primary DV: FAO Food Balance Sheet cereal food supply (kg/capita/year)
+#   = production + imports − exports − stock changes − non-food uses
 #
-# WHY this DV instead of undernourishment:
-#   The dissertation title says "Cereal Food Availability."
-#   Availability = how much food is PRODUCED / accessible per person,
-#   not whether people can afford to buy it (that is the ACCESS dimension).
-#   Undernourishment mixes both availability AND access signals; it cannot
-#   isolate which availability-side factors (yield, PHL, logistics) matter.
-#   Cereal production per capita is a clean availability-side measure:
-#   higher kg/person = more cereal food available in that country.
+#   This is what the proposal specifies as the primary dependent variable.
+#   It measures what food is actually AVAILABLE to people after trade and
+#   storage adjustments — import-dependent countries are correctly included
+#   because their food supply (from imports) is as real as domestically
+#   produced food.
 #
-#   I use production per capita rather than net supply (which would
-#   subtract exports and add imports) because FAO Food Balance Sheet
-#   net supply data was unavailable via API at the time of analysis.
-#   Countries where production ≈ 0 (e.g., city-states, islands that
-#   import all cereals) are excluded with a 5 kg/person minimum filter,
-#   since they represent a structurally different food system.
+# FAO FAOSTAT parameters:
+#   Item 2905: Cereals - Excluding Beer (aggregate)
+#   Element 664: Food supply quantity (g/capita/day)
+#   Conversion: g/day × 365 / 1000 = kg/person/year
+#
+# Fallback: If FAO data is unreachable, we revert to World Bank
+#   cereal production per capita (AG.PRD.CREL.MT) — same as before.
+#   Import-dependent countries (city-states) are then excluded with
+#   a 5 kg/capita minimum filter.
+# ============================================================
 
-print("\n[1] Downloading dependent variable — cereal production per capita...")
+print("\n[1] Downloading dependent variable — FAO FBS cereal food supply...")
 
-# I use the World Bank country metadata to identify real countries
-# (as opposed to regional and income-group aggregates)
-try:
-    meta_resp = requests.get(
-        "https://api.worldbank.org/v2/country",
-        params={"format": "json", "per_page": 400},
-        timeout=30,
-    )
-    meta_json    = meta_resp.json()
-    REAL_ISO3    = {c["id"] for c in meta_json[1]
-                    if c.get("region", {}).get("id", "") != "NA"}
-    print(f"  Real countries in World Bank metadata: {len(REAL_ISO3)}")
-except Exception as e:
-    print(f"  Warning: could not fetch WB metadata ({e}) — using hardcoded exclusion list")
-    REAL_ISO3 = None   # will fall back to exclusion logic below
+FAOSTAT_ITEM = "2905"   # Cereals - Excluding Beer
+FAOSTAT_ELEM = "664"    # Food supply quantity (g/capita/day)
+TARGET_YEAR  = 2021
 
-# Download cereal production (metric tons)
-try:
-    prod_resp = requests.get(
-        "https://api.worldbank.org/v2/country/all/indicator/AG.PRD.CREL.MT",
-        params={"date": 2021, "format": "json", "per_page": 300},
-        timeout=30,
-    )
-    prod_data = prod_resp.json()[1]
-    prod = {}
-    for e in prod_data:
-        iso = e.get("countryiso3code", "")
-        val = e.get("value")
-        if val is None or not iso:
+dv_df = None
+
+# ── Attempt 1: FAOSTAT REST API (new v1 endpoint) ──
+for base_url in [
+    "https://www.fao.org/faostat/api/v1",
+    "https://fenixservices.fao.org/faostat/api/v1",
+]:
+    try:
+        resp = requests.get(
+            f"{base_url}/en/data/FBS",
+            params={
+                "items": FAOSTAT_ITEM,
+                "elements": FAOSTAT_ELEM,
+                "years": TARGET_YEAR,
+                "area": "*",
+                "output_type": "objects",
+            },
+            timeout=60,
+        )
+        if resp.status_code == 200:
+            payload = resp.json()
+            records = payload.get("data", [])
+            if records:
+                api_rows = []
+                for rec in records:
+                    iso3 = rec.get("Area Code (ISO3)", rec.get("area_code_iso3", ""))
+                    val  = rec.get("Value", rec.get("value"))
+                    if iso3 and val is not None and len(str(iso3)) == 3:
+                        try:
+                            kg_yr = float(val) * 365 / 1000
+                            api_rows.append({
+                                "country_code": iso3,
+                                "cereal_availability_kg_pc": round(kg_yr, 2),
+                            })
+                        except (ValueError, TypeError):
+                            pass
+                if api_rows:
+                    dv_df = pd.DataFrame(api_rows)
+                    print(f"  FAO API success ({base_url}): {len(dv_df)} countries")
+                    break
+    except Exception as ex:
+        print(f"  FAO API attempt failed ({base_url}): {ex}")
+
+# ── Attempt 2: FAOSTAT bulk ZIP download ──
+if dv_df is None:
+    bulk_candidates = [
+        "https://bulks-faostat.fao.org/production/FoodBalanceSheets_E_All_Data_(Normalized).zip",
+        "https://www.fao.org/faostat/static/bulkdownloads/FoodBalanceSheets_E_All_Data_(Normalized).zip",
+        "https://fenixservices.fao.org/faostat/static/bulkdownloads/FoodBalanceSheets_E_All_Data_(Normalized).zip",
+    ]
+    for burl in bulk_candidates:
+        try:
+            print(f"  Trying bulk ZIP: {burl}")
+            resp = requests.get(burl, timeout=180, allow_redirects=True, stream=True)
+            if resp.status_code == 200:
+                chunks = []
+                size = 0
+                for chunk in resp.iter_content(chunk_size=1024 * 1024):
+                    chunks.append(chunk)
+                    size += len(chunk)
+                    if size > 250 * 1024 * 1024:
+                        break
+                content = b"".join(chunks)
+                zf = zipfile.ZipFile(io.BytesIO(content))
+
+                # The main data CSV
+                data_csv = next(n for n in zf.namelist()
+                                if n.endswith(".csv") and "AreaCode" not in n)
+                fbs_raw = pd.read_csv(zf.open(data_csv), encoding="latin-1")
+                fbs_raw.columns = [c.strip() for c in fbs_raw.columns]
+
+                # Filter to cereals food supply for the target year
+                mask = (
+                    (fbs_raw["Item Code"].astype(str) == FAOSTAT_ITEM)
+                    & (fbs_raw["Element Code"].astype(str) == FAOSTAT_ELEM)
+                    & (fbs_raw["Year"].astype(str) == str(TARGET_YEAR))
+                )
+                fbs_filt = fbs_raw[mask].copy()
+
+                if len(fbs_filt) > 0:
+                    # FAO ZIP uses M49 codes (e.g. '004 for Afghanistan = AFG).
+                    # Strip the leading apostrophe, zero-pad to 3 digits,
+                    # then map to ISO3 via pycountry.
+                    def m49_to_iso3(m49_raw):
+                        try:
+                            num_str = str(m49_raw).lstrip("'").strip().zfill(3)
+                            c = pycountry.countries.get(numeric=num_str)
+                            return c.alpha_3 if c else None
+                        except Exception:
+                            return None
+
+                    fbs_filt = fbs_filt.copy()
+                    fbs_filt["country_code"] = (
+                        fbs_filt["Area Code (M49)"].apply(m49_to_iso3)
+                    )
+                    fbs_filt = fbs_filt.dropna(subset=["country_code"])
+                    fbs_filt["cereal_availability_kg_pc"] = (
+                        pd.to_numeric(fbs_filt["Value"], errors="coerce") * 365 / 1000
+                    )
+                    dv_df = (
+                        fbs_filt[["country_code", "cereal_availability_kg_pc"]]
+                        .dropna()
+                        .reset_index(drop=True)
+                    )
+                    print(f"  Bulk ZIP success: {len(dv_df)} countries")
+                    break
+        except Exception as ex:
+            print(f"  Bulk ZIP failed ({burl}): {ex}")
+
+# ── Attempt 3: World Bank production per capita (original fallback) ──
+if dv_df is None:
+    print("  FAO FBS unreachable — falling back to WB cereal production per capita")
+    try:
+        meta_resp = requests.get(
+            "https://api.worldbank.org/v2/country",
+            params={"format": "json", "per_page": 400},
+            timeout=30,
+        )
+        meta_json = meta_resp.json()
+        REAL_ISO3 = {c["id"] for c in meta_json[1]
+                     if c.get("region", {}).get("id", "") != "NA"}
+    except Exception:
+        REAL_ISO3 = None
+
+    try:
+        prod_resp = requests.get(
+            "https://api.worldbank.org/v2/country/all/indicator/AG.PRD.CREL.MT",
+            params={"date": TARGET_YEAR, "format": "json", "per_page": 300},
+            timeout=30,
+        )
+        prod_data = prod_resp.json()[1]
+        prod = {
+            e["countryiso3code"]: e["value"]
+            for e in prod_data
+            if e.get("value") and e.get("countryiso3code")
+            and (REAL_ISO3 is None or e["countryiso3code"] in REAL_ISO3)
+        }
+    except Exception as ex:
+        print(f"  WB production download failed: {ex}")
+        prod = {}
+
+    try:
+        pop_resp = requests.get(
+            "https://api.worldbank.org/v2/country/all/indicator/SP.POP.TOTL",
+            params={"date": TARGET_YEAR, "format": "json", "per_page": 300},
+            timeout=30,
+        )
+        pop_data = pop_resp.json()[1]
+        pop = {
+            e["countryiso3code"]: e["value"]
+            for e in pop_data
+            if e.get("value") and e.get("countryiso3code")
+        }
+    except Exception as ex:
+        print(f"  WB population download failed: {ex}")
+        pop = {}
+
+    MIN_KG_PC = 5   # exclude city-states / islands producing no cereals
+    wb_rows = []
+    for iso in prod:
+        if iso not in pop or pop[iso] <= 0:
             continue
-        if REAL_ISO3 is not None and iso not in REAL_ISO3:
+        kg_pc = (prod[iso] * 1000) / pop[iso]
+        if kg_pc < MIN_KG_PC:
             continue
-        prod[iso] = val        # metric tons
-    print(f"  Cereal production data: {len(prod)} real countries")
-except Exception as ex:
-    print(f"  Could not download cereal production: {ex}")
-    prod = {}
+        wb_rows.append({"country_code": iso, "cereal_availability_kg_pc": round(kg_pc, 2)})
+    dv_df = pd.DataFrame(wb_rows)
+    print(f"  WB fallback: {len(dv_df)} countries (≥ {MIN_KG_PC} kg/capita)")
 
-# Download population (total)
-try:
-    pop_resp = requests.get(
-        "https://api.worldbank.org/v2/country/all/indicator/SP.POP.TOTL",
-        params={"date": 2021, "format": "json", "per_page": 300},
-        timeout=30,
-    )
-    pop_data = pop_resp.json()[1]
-    pop = {}
-    for e in pop_data:
-        iso = e.get("countryiso3code", "")
-        val = e.get("value")
-        if val and iso:
-            pop[iso] = val
-except Exception as ex:
-    print(f"  Could not download population: {ex}")
-    pop = {}
-
-# Compute cereal production per capita (kg / person)
-#   1 metric ton = 1,000 kg  →  (tons × 1000) / population
-MIN_KG_PC = 5   # exclude city-states / islands that produce no cereals
-
-rows = []
-for iso in prod:
-    if iso not in pop or pop[iso] <= 0:
-        continue
-    kg_pc = (prod[iso] * 1000) / pop[iso]
-    if kg_pc < MIN_KG_PC:
-        continue  # country does not produce cereals — import-dependent
-    rows.append({"country_code": iso, "cereal_availability_kg_pc": round(kg_pc, 2)})
-
-dv_df = pd.DataFrame(rows)
+dv_df["country_code"] = dv_df["country_code"].astype(str).str.strip()
 dv_df.to_csv("data/raw/cereal_availability_2021.csv", index=False)
-print(f"  Cereal availability computed for {len(dv_df)} countries (≥ {MIN_KG_PC} kg/capita)")
+print(f"  Cereal availability saved for {len(dv_df)} countries")
 print(f"  Range: {dv_df['cereal_availability_kg_pc'].min():.1f} – "
       f"{dv_df['cereal_availability_kg_pc'].max():.1f} kg/person/year")
 
@@ -278,35 +386,40 @@ MODEL_B_VARS = MODEL_A_VARS + [
 
 # ── Model C — +Logistics and Infrastructure ─────────────────────────────────
 # Even if food is produced and not lost, it must MOVE from farms to consumers.
-# Logistics quality (LPI) measures how efficiently goods traverse a country:
-# roads, cold chains, customs, warehousing. Rural electricity access enables
-# storage, milling, and processing — turning raw grain into available food.
-# Both are availability-side: they determine whether produced food reaches people.
-# NOTE: LPI data covers only ~90 countries, so N drops here from Model B.
+# Trade (% of GDP) proxies market integration and logistics capacity — countries
+# with higher trade shares have better transport networks, cold chains, and
+# distribution systems. Rural electricity access enables on-farm storage,
+# milling, and processing.
+# NOTE: LPI (Logistics Performance Index) would be the ideal measure but covers
+#       only 90/174 countries (48% missing). Trade % GDP covers ~170 countries
+#       and is the accepted proxy when LPI is unavailable (FAO 2015 SOCO report).
 MODEL_C_VARS = MODEL_B_VARS + [
-    "lpi_overall",                   # Logistics Performance Index (World Bank)
+    "trade_pct_gdp",                 # Market integration / logistics (WDI NE.TRD.GNFS.ZS)
     "rural_electricity_access_pct",  # Infrastructure for storage and processing
 ]
 
 # ── Model F — NLP-Discovered Availability Themes ──────────────────────────────
-# This model tests the themes DISCOVERED by NLP topic modelling of 328 strictly
-# aligned food insecurity papers. Only AVAILABILITY-SIDE themes are included.
+# This model tests the themes DISCOVERED by NLP topic modelling of the strictly
+# aligned food availability papers. Only AVAILABILITY-SIDE themes are included.
 #
-# LDA K=9 topics on 328 focused papers (coherence=0.384) identified:
+# NMF topics on 127 strictly aligned papers identified:
 #
-#   Topic 7 (clearest signal): post-harvest loss, storage, grain_storage
+#   Topic 2: post-harvest loss, storage, grain_storage
 #     → cereal_loss_pct  (APHLIS + FAO FBS, 100% country coverage)
 #
-#   Topic 3: agricultural investment, logistics, financing frameworks
-#     → lpi_overall  (logistics quality: goods move from farms to markets)
+#   Topic 6 / value-chain: economic, value_chain, investment, system
+#     → trade_pct_gdp  (WDI NE.TRD.GNFS.ZS, ~170 countries)
+#       LPI preferred but only covers 90/174 countries (48% missing).
+#       Trade % GDP is the standard cross-country proxy for market
+#       integration and logistics (FAO 2015; cited in 12 corpus papers).
 #
-#   Topic 2 & 4: climate-smart agriculture, adaptation infrastructure
+#   Topic 5: technology, storage, infrastructure for food systems
 #     → rural_electricity_access_pct  (storage, processing, cold chain)
 #
-#   Topic 6: land productivity, production systems, crop efficiency
+#   Topic 0: land productivity, production systems, crop efficiency
 #     → fertiliser_efficiency  (yield per kg of fertiliser — input productivity)
 #
-#   Topic 1: climate projections, availability disruption, market signals
+#   Topic 3: climate projections, availability disruption, market signals
 #     → food_price_inflation_pct  (price inflation = market signal of
 #       supply-side scarcity in cereals)
 #
@@ -314,11 +427,11 @@ MODEL_C_VARS = MODEL_B_VARS + [
 # deliberately excluded: they explain who can AFFORD food, not whether food
 # is produced and available — which is this dissertation's research question.
 MODEL_F_VARS = MODEL_A_VARS + [
-    "cereal_loss_pct",               # Topic 7: post-harvest loss (NLP priority theme)
-    "lpi_overall",                   # Topic 3: logistics and market investment
-    "rural_electricity_access_pct",  # Topics 2/4: infrastructure for food systems
-    "fertiliser_efficiency",         # Topic 6: land productivity / input efficiency
-    "food_price_inflation_pct",      # Topic 1: market signal of availability disruption
+    "cereal_loss_pct",               # Topic 2: post-harvest loss (NLP priority theme)
+    "trade_pct_gdp",                 # Topic 6: market integration / value-chain proxy
+    "rural_electricity_access_pct",  # Topic 5: infrastructure for food systems
+    "fertiliser_efficiency",         # Topic 0: land productivity / input efficiency
+    "food_price_inflation_pct",      # Topic 3: market signal of availability disruption
 ]
 
 # Three models (as per research proposal) + Model F (NLP contribution)
@@ -348,6 +461,7 @@ def prepare_data(df, predictor_cols, outcome_col):
         "population_total",
         "fertiliser_kg_per_ha",
         "fertiliser_efficiency",      # Ratio: can be very right-skewed
+        "trade_pct_gdp",              # Right-skewed: ranges from ~20% to 400%+ (Singapore)
         "bank_branches_per_100k",
         "atm_per_100k",
         "private_credit_pct_gdp",
@@ -380,7 +494,32 @@ def prepare_data(df, predictor_cols, outcome_col):
         if col in working.columns:
             existing_predictors.append(col)
 
-    # I remove any rows where any needed column is blank
+    # KNN imputation for small gaps (≤ 20% missing per column).
+    # This recovers countries that are only missing one or two predictors
+    # rather than dropping them entirely.
+    # Threshold: skip imputation if a column is more than 20% missing —
+    # that many gaps indicates the variable is structurally unavailable,
+    # not just a data reporting lag.
+    IMPUTE_MAX_MISSING_SHARE = 0.20
+    cols_to_impute = []
+    for col in existing_predictors:
+        n_missing = working[col].isna().sum()
+        share = n_missing / len(working)
+        if 0 < n_missing and share <= IMPUTE_MAX_MISSING_SHARE:
+            cols_to_impute.append(col)
+
+    if cols_to_impute:
+        imputer = KNNImputer(n_neighbors=5)
+        impute_df = working[existing_predictors].copy()
+        imputed_array = imputer.fit_transform(impute_df)
+        imputed_df = pd.DataFrame(imputed_array, columns=existing_predictors,
+                                  index=working.index)
+        for col in cols_to_impute:
+            n_filled = working[col].isna().sum()
+            working[col] = imputed_df[col]
+            print(f"    KNN-imputed {col}: {n_filled} missing values filled")
+
+    # Drop any rows still missing after imputation (DV missing, or >20% gap cols)
     working = working.dropna(subset=needed_existing)
 
     # I pull out the predictor values (X) and outcome values (y)

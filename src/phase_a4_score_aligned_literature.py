@@ -8,7 +8,8 @@
 #   dissertation. This script scores each paper against the
 #   project themes:
 #
-#     - food security / food insecurity / undernourishment
+#     - food security / food insecurity
+#     - food availability, cereal production, food supply
 #     - post-harvest loss
 #     - value chains and market access
 #     - financial access / credit / inclusion
@@ -37,14 +38,87 @@ SUMMARY_FILE = "outputs/tables/literature_alignment_summary.csv"
 CORE_TERMS = {
     "food security": 4,
     "food insecurity": 4,
-    "undernourishment": 4,
-    "undernourished": 4,
+    "food availability": 5,
+    "cereal availability": 5,
+    "food supply": 4,
+    "food supplies": 4,
+    "dietary energy supply": 4,
     "hunger": 3,
-    "malnutrition": 3,
-    "food availability": 3,
-    "food access": 3,
-    "nutrition security": 3,
+    "undernourishment": 2,
+    "undernourished": 2,
+    "malnutrition": 1,
+    "food access": 1,
+    "nutrition security": 1,
 }
+
+FOOD_SECURITY_CORE_TERMS = [
+    "food security",
+    "food insecurity",
+    "food availability",
+    "cereal availability",
+    "hunger",
+]
+
+AVAILABILITY_TERMS = [
+    # Supply and availability measurement terms
+    "food availability",
+    "cereal availability",
+    "food supply",
+    "food supplies",
+    "dietary energy supply",
+    "domestic supply",
+    "calorie availability",
+    "caloric availability",
+    "calorie supply",
+    "caloric supply",
+    "available food",
+    "food balance sheet",
+    "food balance",
+    "grain supply",
+    "cereal supply",
+    # Aggregate production and output terms
+    "food production",
+    "food output",
+    "agricultural output",
+    "cereal output",
+    "crop production",
+    "cereal production",
+    "agricultural production",
+    "grain production",
+    "staple crop",
+    "staple crops",
+    "cereal grain",
+    "cereal grains",
+    # Crop-specific production terms (unambiguously supply-side)
+    "rice production",
+    "wheat production",
+    "maize production",
+    "sorghum production",
+    "millet production",
+    "barley production",
+    # Yield terms
+    "cereal yield",
+    "crop yield",
+    "yield gap",
+    "rice yield",
+    "wheat yield",
+    "maize yield",
+    # Post-harvest, loss, and storage terms
+    "post-harvest loss",
+    "postharvest loss",
+    "post-harvest losses",
+    "postharvest losses",
+    "food loss",
+    "food losses",
+    "storage loss",
+    "grain storage",
+    "cold chain",
+    # Supply-chain and logistics terms
+    "value chain",
+    "supply chain",
+    "food value chain",
+    "food system",
+]
 
 
 THEMES = {
@@ -156,9 +230,23 @@ PROJECT_DRIVER_THEMES = [
     "governance_institutions",  # governance quality shapes food system access and stability
 ]
 
+AVAILABILITY_DRIVER_THEMES = [
+    "post_harvest_loss",
+    "value_chain_market_access",
+    "production_yield_cereals",
+]
+
 
 SKIP_TERMS = [
     "genome",
+    "molecular hydrogen",
+    "microplasma",
+    "far-uvc",
+    "fungal contamination",
+    "mycotoxin accumulation",
+    "pathogen",
+    "aspergillus",
+    "fusarium",
     "transcriptome",
     "rna splicing",
     "virulence",
@@ -223,19 +311,30 @@ def score_one_paper(row):
     full_text = title + " " + abstract
 
     skip_matches = match_terms(full_text, SKIP_TERMS)
+    availability_matches = match_terms(full_text, AVAILABILITY_TERMS)
+    title_availability_matches = match_terms(title, AVAILABILITY_TERMS)
 
     score = 0
     core_matches = []
     title_core_matches = []
+    food_security_core_matches = []
 
     for term, weight in CORE_TERMS.items():
         if contains_phrase(title, term):
             score = score + weight + 2
             core_matches.append(term)
             title_core_matches.append(term)
+            if term in FOOD_SECURITY_CORE_TERMS:
+                food_security_core_matches.append(term)
         elif contains_phrase(abstract, term):
             score = score + weight
             core_matches.append(term)
+            if term in FOOD_SECURITY_CORE_TERMS:
+                food_security_core_matches.append(term)
+
+    if availability_matches:
+        score = score + 3
+        score = score + len(title_availability_matches)
 
     theme_matches = []
 
@@ -269,22 +368,37 @@ def score_one_paper(row):
     has_core = len(core_matches) > 0
     theme_count = len(theme_matches)
     project_driver_count = 0
+    availability_driver_count = 0
 
     for theme_name in theme_matches:
         if theme_name in PROJECT_DRIVER_THEMES:
             project_driver_count = project_driver_count + 1
+        if theme_name in AVAILABILITY_DRIVER_THEMES:
+            availability_driver_count = availability_driver_count + 1
 
     is_pdf = clean_text(row.get("source_db", "")) == "pdf"
+    has_food_security_core = len(food_security_core_matches) > 0
+    # Requires at least one explicit supply-side availability term in the text.
+    # Theme-based fallbacks are no longer accepted so that household food
+    # security / access papers cannot reach "strict" without a supply-side signal.
+    has_explicit_availability = len(availability_matches) > 0
 
     if is_pdf:
-        # PDFs are manually curated by the researcher, so they are pre-vetted
-        # for topic relevance. Two paths to strict are used:
-        #   • Core-term path: score ≥ 7 and a food-security core term matched.
-        #   • Driver path: score ≥ 6 and two project-driver themes matched
-        #     (handles post-harvest / value-chain papers that discuss food
-        #     security implications without using the exact core phrase).
-        core_path = score >= 7 and has_core and len(skip_matches) == 0
-        driver_path = score >= 6 and project_driver_count >= 2 and len(skip_matches) == 0
+        # PDFs are manually curated, but the NLP corpus still needs to be
+        # availability-side. Access-only or nutrition-only PDFs stay out of
+        # the strict LDA input.
+        core_path = (
+            score >= 7
+            and has_food_security_core
+            and has_explicit_availability
+            and len(skip_matches) == 0
+        )
+        driver_path = (
+            score >= 7
+            and project_driver_count >= 2
+            and has_explicit_availability
+            and len(skip_matches) == 0
+        )
         if core_path or driver_path:
             level = "strict"
         elif score >= 4 and len(skip_matches) == 0 and (has_core or theme_count >= 1):
@@ -294,14 +408,18 @@ def score_one_paper(row):
     else:
         if (
             score >= 12
-            and has_core
-            and theme_count >= 2
-            and project_driver_count >= 1
+            and has_food_security_core
+            and has_explicit_availability
             and len(skip_matches) == 0
-            and (len(title_core_matches) > 0 or project_driver_count >= 2)
+            and (len(title_core_matches) > 0 or len(title_availability_matches) > 0 or availability_driver_count >= 2)
         ):
             level = "strict"
-        elif score >= 7 and has_core and theme_count >= 1 and len(skip_matches) == 0:
+        elif (
+            score >= 7
+            and has_core
+            and theme_count >= 1
+            and len(skip_matches) == 0
+        ):
             level = "moderate"
         else:
             level = "weak"
@@ -312,9 +430,12 @@ def score_one_paper(row):
             "alignment_level": level,
             "matched_core_terms": "; ".join(sorted(set(core_matches))),
             "matched_title_core_terms": "; ".join(sorted(set(title_core_matches))),
+            "matched_availability_terms": "; ".join(sorted(set(availability_matches))),
+            "matched_title_availability_terms": "; ".join(sorted(set(title_availability_matches))),
             "matched_themes": "; ".join(sorted(set(theme_matches))),
             "theme_count": theme_count,
             "project_driver_theme_count": project_driver_count,
+            "availability_driver_theme_count": availability_driver_count,
             "skip_terms": "; ".join(sorted(set(skip_matches))),
         }
     )

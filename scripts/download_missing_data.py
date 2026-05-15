@@ -229,6 +229,53 @@ if not flw_ok:
 
 
 # ============================================================
+# Part 3: Trade % of GDP — market-integration / logistics proxy
+# ============================================================
+# LPI (Logistics Performance Index) is available for only ~90 of our
+# 154-country analysis sample — a 48% gap that cannot be safely imputed.
+# Trade (% of GDP) — WDI NE.TRD.GNFS.ZS — covers ~175 countries and is
+# the standard cross-country proxy for market integration and logistics
+# capacity when LPI is unavailable (FAO 2015; Headey & Ecker 2013).
+# NMF Topic 6 keywords (economic, value_chain, investment, system) align
+# with this: trade openness reflects logistics networks and market connectivity.
+
+print("\n[3/3] World Bank WDI — Trade % of GDP (market-integration proxy)...")
+
+TRADE_FILE = "data/raw/trade_pct_gdp.csv"
+trade_ok = False
+
+try:
+    url = "https://api.worldbank.org/v2/country/all/indicator/NE.TRD.GNFS.ZS"
+    params = {"date": "2019:2021", "format": "json", "per_page": 1000}
+    r = requests.get(url, params=params, timeout=30)
+    r.raise_for_status()
+    payload = r.json()
+    data = payload[1] if len(payload) > 1 and payload[1] else []
+
+    # Keep the most recent non-null value per country (prefer 2021)
+    best = {}
+    for entry in data:
+        iso3 = entry.get("countryiso3code", "")
+        val = entry.get("value")
+        year = entry.get("date", "0")
+        if iso3 and len(iso3) == 3 and val is not None:
+            if iso3 not in best or year > best[iso3]["year"]:
+                best[iso3] = {"country_code": iso3,
+                              "trade_pct_gdp": round(float(val), 2),
+                              "year": year}
+
+    if len(best) >= 100:
+        trade_df = pd.DataFrame(best.values())[["country_code", "trade_pct_gdp"]]
+        trade_df.to_csv(TRADE_FILE, index=False)
+        print(f"  Saved trade_pct_gdp.csv — {len(trade_df)} countries")
+        trade_ok = True
+    else:
+        print(f"  Only {len(best)} rows returned — check API response")
+except Exception as e:
+    print(f"  Trade % GDP download failed: {e}")
+
+
+# ============================================================
 # Summary
 # ============================================================
 print("\n" + "=" * 60)
@@ -238,6 +285,7 @@ print("=" * 60)
 for fname, label in [
     ("data/raw/wgi_governance_2021.csv", "WGI Governance"),
     ("data/raw/fao_flw_losses.csv",      "FAO Food Loss & Waste"),
+    ("data/raw/trade_pct_gdp.csv",       "Trade % GDP (logistics proxy)"),
 ]:
     if os.path.exists(fname):
         try:

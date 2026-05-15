@@ -1,0 +1,5 @@
+Specification,N,R²,Adj R²,Rural Electricity Coef,Rural Electricity Sig,Post-Harvest Loss Coef,Post-Harvest Loss Sig,Trade % GDP Coef,Trade % GDP Sig
+Spec F1 — Model F Baseline,131,0.322,0.253,0.003,**,-0.007,,-0.05,
+Spec F2 — Model F Developing,85,0.185,0.049,0.001,,-0.015,,-0.021,
+Spec F3 — Model F Level DV,131,0.331,0.263,1.207,**,-2.59,,-22.388,
+Spec F4 — Model F No Cook (N-7),124,0.365,0.296,0.001,,-0.007,,-0.028,

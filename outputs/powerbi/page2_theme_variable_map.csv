@@ -1,4 +1,4 @@
-topic_id,top_words,theme_label,proxy_variable,dataset_source
+Topic ID,Top Words,NLP Theme,Proxy Variable (Model F),Data Source
 0,"crop, environmental, production, resource, water, region, impact, environmental_impact, current, rice",,,
 1,"resilience, economic, supply_chain, system, institutional, grain, waste, framework, postharvest_loss, factor",,,
 2,"agriculture, ethiopia, csa_practice, csa, climate_change, change, association, agricultural_productivity, climate, calorie",,,

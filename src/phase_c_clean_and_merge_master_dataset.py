@@ -341,20 +341,28 @@ if wgi is not None:
 else:
     print("  WGI not merged — no data available yet")
 
-# ── NEW: Logistics Performance Index (NLP theme: value chain / market access) ──
-# The LPI measures how well a country's logistics infrastructure moves goods
-# from farms to markets and ports. It is the empirical proxy for the
-# "value_chain_market_access" theme discovered by LDA topic modelling.
+# ── LPI retained for robustness checks only (~90/174 countries) ────────────────
 LPI_FILE = "data/raw/lpi.csv"
 if os.path.exists(LPI_FILE):
     lpi_raw = pd.read_csv(LPI_FILE)
-    lpi_slim = lpi_raw[["country_code", "lpi_overall"]].dropna(
+    lpi_slim = lpi_raw[["country_code", "lpi_overall"]].dropna(subset=["country_code"]).copy()
+    master = master.merge(lpi_slim, on="country_code", how="left")
+    print(f"  After merging LPI (robustness only): {master.shape}")
+
+# ── Trade % GDP — primary logistics/market-integration proxy ───────────────────
+# NE.TRD.GNFS.ZS covers ~175 countries and proxies the value-chain / market
+# integration theme from NMF Topic 6. Used in Models C and F instead of LPI.
+TRADE_FILE = "data/raw/trade_pct_gdp.csv"
+if os.path.exists(TRADE_FILE):
+    trade_raw = pd.read_csv(TRADE_FILE)
+    trade_slim = trade_raw[["country_code", "trade_pct_gdp"]].dropna(
         subset=["country_code"]
     ).copy()
-    master = master.merge(lpi_slim, on="country_code", how="left")
-    print("  After merging LPI:", master.shape)
+    master = master.merge(trade_slim, on="country_code", how="left")
+    n_trade = master["trade_pct_gdp"].notna().sum()
+    print(f"  After merging trade % GDP: {master.shape} — {n_trade} countries have data")
 else:
-    print("  LPI file not found — run scripts/download_new_data.py first")
+    print("  trade_pct_gdp.csv not found — run scripts/download_missing_data.py first")
 
 # ── NEW: Rural poverty headcount (NLP theme: smallholder / poverty) ────────────
 # The $2.15/day poverty headcount directly captures the resource constraints

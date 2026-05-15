@@ -1,0 +1,30 @@
+# Never copy these into the Docker image
+
+# Development environment — not needed inside the container
+venv/
+.venv/
+
+# Git history — not needed at runtime
+.git/
+.gitignore
+.gitattributes
+
+# Raw data is mounted as a volume at runtime (keeps image small)
+data/raw/
+
+# Secrets — injected via docker-compose env_file at runtime
+.env
+
+# OS / IDE noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+*.ipynb_checkpoints

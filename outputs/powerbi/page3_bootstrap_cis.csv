@@ -1,0 +1,6 @@
+Variable,Bootstrap Mean,95% CI Lower,95% CI Upper,Bootstrap Iterations,Model,CI Excludes Zero
+cereal_loss_pct,0.0037,-0.0142,0.0202,1000,Model F,No
+trade_pct_gdp,-0.0408,-0.1192,0.0378,1000,Model F,No
+rural_electricity_access_pct,0.0042,0.0009,0.0072,1000,Model F,Yes ✓
+fertiliser_efficiency,0.0215,-0.6609,0.2566,1000,Model F,No
+food_price_inflation_pct,-0.0006,-0.0028,0.0026,1000,Model F,No
