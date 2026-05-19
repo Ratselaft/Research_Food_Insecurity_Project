@@ -3,7 +3,7 @@
 **Student:** Odekunle Jibola Johnson
 **Programme:** MSc Data Science and Artificial Intelligence
 **Institution:** Sheffield Hallam University
-**Supervisor:** [Supervisor Name]
+**Supervisor:** Dr Richard S Wilson FHEA MBCS
 **Submission Date:** May 2026
 **Word Count:** 18,854 words (body text)
 
