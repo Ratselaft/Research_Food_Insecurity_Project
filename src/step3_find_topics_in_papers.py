@@ -274,7 +274,7 @@ plt.ylabel('Coherence score (c_v)')
 plt.title(f'LDA coherence sweep — {len(df)} strictly aligned availability papers')
 plt.legend()
 plt.tight_layout()
-plt.savefig('outputs/figures/lda_coherence_curve.png', dpi=150)
+plt.savefig('outputs/figures/lda_coherence_curve.png', dpi=300)
 plt.close()
 print("Coherence curve saved → outputs/figures/lda_coherence_curve.png")
 

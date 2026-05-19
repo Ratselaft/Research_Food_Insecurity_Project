@@ -666,7 +666,7 @@ def make_shap_plot(rf_model, X, model_name):
     plt.tight_layout()
 
     fig_path = "outputs/figures/shap_" + safe_name + ".png"
-    plt.savefig(fig_path, dpi=150, bbox_inches="tight")
+    plt.savefig(fig_path, dpi=300, bbox_inches="tight")
     plt.close()
     print("    SHAP chart saved →", fig_path)
 
@@ -986,7 +986,7 @@ ax.legend()
 ax.set_ylim(0, 1.05)
 ax.axhline(0, color="black", linewidth=0.5)
 plt.tight_layout()
-plt.savefig("outputs/figures/model_r2_comparison.png", dpi=150)
+plt.savefig("outputs/figures/model_r2_comparison.png", dpi=300)
 plt.close()
 print("R² progression chart saved → outputs/figures/model_r2_comparison.png")
 
@@ -1104,7 +1104,7 @@ if len(X_f_chart) >= 30:
         "Positive = increases cereal availability"
     )
     plt.tight_layout()
-    plt.savefig("outputs/figures/model_f_nlp_coefficients.png", dpi=150)
+    plt.savefig("outputs/figures/model_f_nlp_coefficients.png", dpi=300)
     plt.close()
     print("Coefficient chart saved → outputs/figures/model_f_nlp_coefficients.png")
 else:

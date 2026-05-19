@@ -290,7 +290,7 @@ plt.legend()
 plt.tight_layout()
 
 # I save the chart
-plt.savefig("outputs/figures/cooks_distance.png", dpi=150)
+plt.savefig("outputs/figures/cooks_distance.png", dpi=300)
 plt.close()
 
 print("\n  Cook's Distance chart saved → outputs/figures/cooks_distance.png")
@@ -708,7 +708,7 @@ plt.suptitle("Robustness check: key coefficients across 7 specifications\n"
 plt.tight_layout()
 
 # I save the chart
-plt.savefig("outputs/figures/robustness_coefficients.png", dpi=150, bbox_inches="tight")
+plt.savefig("outputs/figures/robustness_coefficients.png", dpi=300, bbox_inches="tight")
 plt.close()
 
 print("  Coefficient stability chart saved → outputs/figures/robustness_coefficients.png")
