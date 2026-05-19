@@ -412,7 +412,9 @@ if scores[best_k] < 0.60:
     # LDA is not ideal for every corpus. When coherence is below the
     # proposal threshold, NMF on TF-IDF gives a cleaner diagnostic set of
     # availability-side themes without changing the raw literature corpus.
-    nmf_k = min(8, max(3, len(df) // 15))
+    # k=7 is fixed here so that re-running always reproduces the seven
+    # themes reported in the dissertation, regardless of corpus size.
+    nmf_k = 7
     nmf_model = NMF(
         n_components=nmf_k,
         init='nndsvda',
@@ -439,6 +441,42 @@ if scores[best_k] < 0.60:
     nmf_df = pd.DataFrame(nmf_rows)
     nmf_df.to_csv('data/processed/nmf_availability_topics.csv', index=False)
     print("NMF fallback topics saved → data/processed/nmf_availability_topics.csv")
+
+# ============================================================
+# Step 10: NMF sensitivity analysis (k = 5, 7, 9)
+# ============================================================
+# I run NMF at k=5, k=7, and k=9 to check whether the k=7
+# primary solution is robust to the choice of topic number.
+# Using max_iter=500 prevents convergence warnings at k=9.
+
+print("\nRunning NMF sensitivity check (k = 5, 7, 9)...")
+
+sensitivity_rows = []
+for k_val in [5, 7, 9]:
+    nmf_check = NMF(
+        n_components=k_val,
+        init='nndsvda',
+        random_state=RANDOM_SEED,
+        max_iter=500,
+    )
+    nmf_check.fit_transform(tfidf_matrix)
+
+    for topic_id in range(k_val):
+        weights  = nmf_check.components_[topic_id]
+        top_idx  = weights.argsort()[::-1][:10]
+        top_kws  = []
+        for idx in top_idx:
+            top_kws.append(feature_names[idx])
+        sensitivity_rows.append({
+            'k':            k_val,
+            'topic_id':     topic_id,
+            'top_keywords': ', '.join(top_kws),
+        })
+    print(f"  k={k_val}: done")
+
+sens_df = pd.DataFrame(sensitivity_rows)
+sens_df.to_csv('data/processed/nmf_sensitivity_analysis.csv', index=False)
+print("Sensitivity results saved → data/processed/nmf_sensitivity_analysis.csv")
 
 print(f"\n=== Step 3 complete. LDA coherence: {scores[best_k]} (K={best_k}) ===")
 print(f"{'SUCCESS' if scores[best_k] >= 0.60 else 'BELOW TARGET'}: target was c_v >= 0.60")

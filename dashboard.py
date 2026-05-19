@@ -28,7 +28,7 @@ st.set_page_config(
     page_icon="🌾",
     layout="wide",
     initial_sidebar_state="expanded",
-)
+
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 DATA_DIR = os.path.join(os.path.dirname(__file__), "outputs", "powerbi")

@@ -823,7 +823,7 @@ Barrett, C. B. (2010). Measuring food insecurity. *Science*, *327*(5967), 825–
 
 Bateman, M. (2010). *Why doesn't microfinance work? The destructive rise of local neoliberalism*. Zed Books.
 
-Blei, D. M., Ng, A. Y., & Jordan, M. I. (2003). Latent Dirichlet allocation. *Journal of Machine Learning Research*, *3*, 993–1022.
+Blei, D. M., Ng, A. Y., & Jordan, M. I. (2003). Latent Dirichlet allocation. *Journal of Machine Learning Research*, *3*, 993–1022. https://doi.org/10.5555/944919.944937
 
 Coates, J. (2013). Build it back better: Deconstructing food security for improved measurement and action. *Global Food Security*, *2*(3), 188–194. https://doi.org/10.1016/j.gfs.2013.05.002
 
@@ -831,9 +831,9 @@ Demirgüç-Kunt, A., Klapper, L., Singer, D., Ansar, S., & Hess, J. (2022). *The
 
 Dinkelman, T. (2011). The effects of rural electrification on employment: New evidence from South Africa. *American Economic Review*, *101*(7), 3078–3108. https://doi.org/10.1257/aer.101.7.3078
 
-FAO. (2015). *The State of Food and Agriculture: Social protection and agriculture — Breaking the cycle of rural poverty*. Food and Agriculture Organization of the United Nations.
+FAO. (2015). *The State of Food and Agriculture: Social protection and agriculture — Breaking the cycle of rural poverty*. Food and Agriculture Organization of the United Nations. https://www.fao.org/3/a-i4910e.pdf
 
-FAO. (2019). *The State of Food and Agriculture: Moving forward on food loss and waste reduction*. Food and Agriculture Organization of the United Nations.
+FAO. (2019). *The State of Food and Agriculture: Moving forward on food loss and waste reduction*. Food and Agriculture Organization of the United Nations. https://doi.org/10.4060/ca6030en
 
 FAO, IFAD, UNICEF, WFP, & WHO. (2023). *The State of Food Security and Nutrition in the World 2023: Urbanization, agrifood systems transformation and healthy diets across the rural–urban continuum*. Food and Agriculture Organization of the United Nations. https://doi.org/10.4060/cc3017en
 
@@ -849,7 +849,7 @@ Kaufmann, D., Kraay, A., & Mastruzzi, M. (2010). *The Worldwide Governance Indic
 
 Lee, D. D., & Seung, H. S. (1999). Learning the parts of objects by non-negative matrix factorization. *Nature*, *401*(6755), 788–791. https://doi.org/10.1038/44565
 
-Lipinski, B., Hanson, C., Lomax, J., Kitinoja, L., Waite, R., & Searchinger, T. (2013). *Reducing food loss and waste* (World Resources Institute Working Paper). World Resources Institute.
+Lipinski, B., Hanson, C., Lomax, J., Kitinoja, L., Waite, R., & Searchinger, T. (2013). *Reducing food loss and waste* (World Resources Institute Working Paper). World Resources Institute. https://www.wri.org/research/reducing-food-loss-and-waste
 
 Maxwell, S. (1996). Food security: A post-modern perspective. *Food Policy*, *21*(2), 155–170. https://doi.org/10.1016/0306-9192(95)00074-7
 
