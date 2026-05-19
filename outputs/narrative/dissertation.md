@@ -11,11 +11,11 @@
 
 ## Abstract
 
-Food insecurity remains one of the defining challenges of the twenty-first century, yet the academic literature on its determinants is voluminous, fragmented, and rarely translated systematically into predictive empirical models. This dissertation bridges that gap by deploying a computational text-mining pipeline on a 127-paper corpus of peer-reviewed food security and cereal availability studies, extracting the dominant thematic clusters identified by the literature, and testing whether those themes translate into statistically significant predictive power in cross-country machine learning models of cereal food availability.
+Food insecurity remains one of the defining challenges of the twenty-first century, yet the academic literature on its determinants is voluminous, fragmented, and rarely translated systematically into predictive empirical models. This dissertation bridges that gap by deploying a computational text-mining pipeline on a 127-paper corpus of peer-reviewed food security and cereal availability studies, extracting the dominant thematic clusters identified by the literature, and testing whether those themes translate into statistically significant predictive power in cross-country econometric models of cereal food availability, supplemented by Random Forest and XGBoost cross-validation as generalisation checks.
 
 The dependent variable is national cereal food supply per capita (kg/person/year) derived from the FAO Food Balance Sheet (FAOSTAT Item 2905, Element 664), covering 160 countries in 2021. A sequential model-building strategy progresses from a seven-predictor production baseline (Model A, R² = 0.196) through post-harvest loss augmentation (Model B, R² = 0.202) and logistics and infrastructure augmentation (Model C, R² = 0.277) to a final twelve-predictor NLP-discovered themes model (Model F, R² = 0.283). The critical inferential test is a nested F-test comparing the NLP block (five additional predictors) against the same-sample baseline, yielding **F(5, 147) = 3.649, p = 0.004**, with a partial R² of 11.0%.
 
-Natural language processing employs TF-IDF feature extraction and Non-Negative Matrix Factorisation (NMF, k = 7 topics) as the primary topic model, after Latent Dirichlet Allocation (LDA) produces coherence scores (c_v ≈ 0.38) below the pre-registered 0.60 threshold. Seven thematic clusters emerge: land, soil and water resources; household-level determinants; post-harvest loss and storage; climate change adaptation; grain variety and temperature; technology and storage adoption; and Africa value chain and investment.
+Natural language processing employs TF-IDF feature extraction and Non-Negative Matrix Factorisation (NMF, k = 7 topics) as the primary topic model, after Latent Dirichlet Allocation (LDA) produces coherence scores (c_v ≈ 0.38) below the pre-specified 0.60 threshold. Seven thematic clusters emerge: land, soil and water resources; household-level determinants; post-harvest loss and storage; climate change adaptation; grain variety and temperature; technology and storage adoption; and Africa value chain and investment.
 
 Cross-validated out-of-sample R² values for Model F (RF: 0.078; XGB: 0.066) are substantially below the OLS in-sample figure, reflecting the generalisation ceiling imposed by a 160-country sample with 12 predictors; this gap is discussed alongside the OLS results in Chapter 4. The central finding is that rural electricity access — an infrastructure proxy operationalising the literature's storage and logistics themes — is the single NLP-discovered predictor with robust empirical support (coefficient = +0.004, p = 0.012, bootstrap 95% CI [+0.001, +0.007] excludes zero). Post-harvest loss, despite constituting the literature's most prominent availability-side theme (Topic 2 plus substantial overlap in Topic 6), does not translate to a statistically significant predictor at cross-country scale (p = 0.476–0.639 across model specifications). This divergence between literature emphasis and empirical signal is itself a substantive finding. Financial access variables, while theoretically relevant through demand-side channels, show no robust signal for the supply-side availability dependent variable used here, consistent with the four-pillar architecture of food security. Limitations include a cross-sectional design (association, not causation), moderate multicollinearity in the full NLP model (Condition Number ≈ 2,960 for Model F; 1,950 for the baseline Model A), proxy measurement error, and reduced explanatory power in the developing-country subsample (R² = 0.081). The dissertation concludes that NLP-guided variable discovery is a productive complement to theory-driven model specification, while emphasising that statistical significance at cross-country aggregation does not resolve micro-level causal pathways.
 
@@ -66,7 +66,7 @@ Chapter 2 reviews the theoretical and empirical literature across four thematic 
 
 ## 2.1 The Architecture of Food Security: Four Pillars and the Availability Primacy Debate
 
-The concept of food security has undergone substantial theoretical evolution since it entered international discourse in the 1970s. The dominant early framing was supply-centric: food security meant adequate aggregate food production at national scale (Maxwell, 1996). The catastrophic famines of the 1970s and 1980s, studied with particular rigour by Amartya Sen, demonstrated that food availability at aggregate level was neither necessary nor sufficient for individual food security — a household could face starvation amid national surplus if it lacked the entitlements to access food (Sen, 1981, as cited in Maxwell, 1996). This entitlements insight shifted the analytical frame toward access, giving rise to the multi-pillar definition formalised at the 1996 World Food Summit and extended through subsequent FAO frameworks.
+The concept of food security has undergone substantial theoretical evolution since it entered international discourse in the 1970s. The dominant early framing was supply-centric: food security meant adequate aggregate food production at national scale (Maxwell, 1996). The catastrophic famines of the 1970s and 1980s, studied with particular rigour by Amartya Sen, demonstrated that food availability at aggregate level was neither necessary nor sufficient for individual food security — a household could face starvation amid national surplus if it lacked the entitlements to access food (Sen, 1981). This entitlements insight shifted the analytical frame toward access, giving rise to the multi-pillar definition formalised at the 1996 World Food Summit and extended through subsequent FAO frameworks.
 
 The four-pillar framework — availability, access, utilisation, and stability — structures the analysis in this dissertation. Availability refers to the physical existence of adequate quantities of food at national, subnational, or local level, determined by domestic production, imports, stocks, and food aid (Barrett, 2010). Access refers to households' economic and physical ability to obtain food. Utilisation encompasses biological use of food, encompassing diet diversity, food safety, and care practices. Stability denotes the temporal continuity of availability and access across seasons and economic shocks. As Coates (2013) observes, these pillars interact in complex, non-linear ways, and measuring any one pillar in isolation risks masking deficits in another. Webb et al. (2006) similarly argue that household-level food insecurity measurement must capture all four dimensions to be policy-actionable.
 
@@ -138,7 +138,7 @@ The development of large-scale open academic graph platforms — most relevantly
 
 ### 2.5.2 Topic Modelling: LDA and NMF
 
-Latent Dirichlet Allocation (LDA), introduced by Blei et al. (2003), is the most widely used probabilistic topic model in social science text mining. LDA treats each document as a mixture of topics and each topic as a distribution over words, with inference conducted via variational Bayes or Gibbs sampling. A well-fitted LDA model produces coherent, interpretable topics that reflect genuine semantic clustering in the corpus. Coherence scores, particularly the c_v metric which correlates best with human judgment, provide a model-fit heuristic: values above 0.60 are generally considered indicative of good topic quality (Röder et al., 2015, as cited in practice). In the present study, LDA produces a best c_v coherence of approximately 0.38, below the pre-registered 0.60 threshold. This likely reflects the relatively small corpus (N = 127) and the specialised, technical vocabulary of agricultural and food security research, which creates sparse document-term matrices that challenge probabilistic inference.
+Latent Dirichlet Allocation (LDA), introduced by Blei et al. (2003), is the most widely used probabilistic topic model in social science text mining. LDA treats each document as a mixture of topics and each topic as a distribution over words, with inference conducted via variational Bayes or Gibbs sampling. A well-fitted LDA model produces coherent, interpretable topics that reflect genuine semantic clustering in the corpus. Coherence scores, particularly the c_v metric which correlates best with human judgment, provide a model-fit heuristic: values above 0.60 are generally considered indicative of good topic quality (Röder, Both, & Hinneburg, 2015). In the present study, LDA produces a best c_v coherence of approximately 0.38, below the pre-specified 0.60 threshold. This likely reflects the relatively small corpus (N = 127) and the specialised, technical vocabulary of agricultural and food security research, which creates sparse document-term matrices that challenge probabilistic inference.
 
 LDA's statistical foundations require that the document collection is large enough to allow reliable estimation of both topic-word and document-topic distributions. The original Blei et al. (2003) implementation was designed for thousands of documents; with only 127 documents, the joint probability space is underidentified, resulting in topic instability across random seeds and the low coherence scores observed here. This is a practical limitation that should be anticipated in any application of LDA to small, specialised academic corpora — and the solution, as adopted in this study, is to use NMF as the primary decomposition method.
 
@@ -215,11 +215,11 @@ The pre-processed corpus was represented as a document-term matrix using Term Fr
 
 ### 3.3.3 LDA Topic Modelling (Exploratory)
 
-Latent Dirichlet Allocation was applied across a sweep of topic counts from K = 3 to K = 12, with c_v coherence computed at each K using a sliding window approach. The best coherence achieved was approximately 0.38 at K = 8, which is below the pre-registered 0.60 threshold specified in the research proposal. This result is reported as exploratory and is not used as the primary NLP output. The likely explanation for the low coherence is the small corpus size (N = 127), which produces a sparse document-term matrix insufficient for reliable LDA inference. The LDA results are presented in Appendix A alongside the coherence curve figure.
+Latent Dirichlet Allocation was applied across a sweep of topic counts from K = 3 to K = 12, with c_v coherence computed at each K using a sliding window approach. The best coherence achieved was approximately 0.38 at K = 8, which is below the pre-specified 0.60 threshold specified in the research proposal. This result is reported as exploratory and is not used as the primary NLP output. The likely explanation for the low coherence is the small corpus size (N = 127), which produces a sparse document-term matrix insufficient for reliable LDA inference. The LDA results are presented in Appendix A alongside the coherence curve figure.
 
 ### 3.3.4 NMF Topic Modelling (Primary)
 
-Non-Negative Matrix Factorisation was applied as the primary topic model. The number of topics was determined by the formula k = min(8, max(3, 127 // 15)) = 8, adjusted downward to k = 7 by the data to avoid degenerate topics. NMF factorises the TF-IDF matrix W into two non-negative matrices H (topics × vocabulary) and D (documents × topics), with reconstruction loss minimised via alternating least squares. The seven resulting topics were labelled by inspection of the top eight keywords per topic. Document assignment was made by the dominant topic (highest component score). Dominant paper counts per topic range from 7 to 27, reflecting natural variation in how much of the corpus addresses each theme.
+Non-Negative Matrix Factorisation was applied as the primary topic model. Unlike LDA, NMF does not have a single published coherence-based model selection criterion, so topic number selection relied on a combination of two approaches. First, a formula heuristic (k = min(8, max(3, N // 15)), where N = 127 documents) suggested k = 8 as a starting point. Second, topic solutions at k = 5, 7, and 9 were each inspected by the researcher for interpretability and stability, with k = 7 selected because it produced the clearest thematic separation without generating duplicate or incoherent topics. This selection involves researcher judgement and is therefore a subjective element of the NLP pipeline; a sensitivity analysis presented in Appendix A (Table A.2) shows that the core themes — post-harvest loss, climate change adaptation, land and water, and value chain — are stable across k = 5 and k = 9, supporting confidence in the primary k = 7 solution. NMF factorises the TF-IDF matrix W into two non-negative matrices H (topics × vocabulary) and D (documents × topics), with reconstruction loss minimised via alternating least squares. The seven resulting topics were labelled by inspection of the top eight keywords per topic. Document assignment was made by the dominant topic (highest component score). Dominant paper counts per topic range from 7 to 27, reflecting natural variation in how much of the corpus addresses each theme.
 
 The seven NMF topics, their keywords, and dominant paper counts are:
 
@@ -274,7 +274,7 @@ Skewed predictors (cereal_yield_kg_per_ha, fertiliser_kg_per_ha, gdp_per_capita_
 
 A practical challenge in assembling the cross-country variable set is differential data availability across countries. FAOSTAT and World Bank WDI cover the majority of the 160-country sample, but several variables have meaningful missing-data rates. Fertiliser kg per hectare is missing for some Pacific island states and small territories. Agricultural employment percentage is missing or severely lagged for several Gulf states and some African countries where Labour Force Survey data are unreliable. Food price inflation rates are missing for a subset of countries not tracked by the IMF consumer price index system.
 
-The strategy adopted here is listwise deletion: countries with missing values on any variable required by a given model are excluded from that model's estimation. This is conservative but avoids the assumption required for multiple imputation that missingness is independent of the outcome — an assumption difficult to verify in a cross-country food security context where data absence itself often correlates with governance weakness or conflict. The resulting sample sizes (N = 157 in some robustness specifications, N = 160 in primary models) reflect this treatment. All country-level variable values are from the 2021 reference year where available, with the most recent available year used for countries with missing 2021 data for specific variables (in practice, this affects fewer than five countries for any single variable).
+The missing data strategy has two tiers. For variables with up to 20 percent missing observations, K-Nearest Neighbour imputation (KNN, k = 5, RANDOM_SEED = 42) is applied before model fitting. This recovers countries missing only one or two predictors due to data reporting lags rather than structural data absence, and is implemented using scikit-learn's KNNImputer on the log-transformed predictor matrix. Variables with more than 20 percent missing observations are not imputed; countries without valid values for such variables are excluded via listwise deletion. In practice, KNN imputation affects trade_pct_gdp (14 missing values), rural_electricity_access_pct (8 missing values), and fertiliser_efficiency (1 missing value) in the primary models. The resulting sample sizes (N = 157 in some robustness specifications, N = 160 in primary models) reflect this combined treatment. Readers should note that KNN-imputed observations are synthetic estimates; results are robust to their exclusion, as confirmed by the reduced-N robustness specifications in Section 4.6. All country-level variable values are from the 2021 reference year where available, with the most recent available year used for countries with missing 2021 data (in practice, fewer than five countries for any single variable).
 
 ## 3.5 Sequential Model Building Strategy
 
@@ -306,7 +306,7 @@ where q is the number of restrictions (5 NLP predictors), n is the sample size (
 
 ### 3.6.1 Multiple Testing Considerations
 
-The sequential model-building strategy involves multiple hypothesis tests across multiple model specifications, which in principle inflates the family-wise Type I error rate. With five NLP predictors tested individually in Model F plus seven robustness specifications, there are numerous opportunities for false positives. The nested F-test addresses this for the NLP block as a whole — testing the joint null that all five coefficients are zero simultaneously — and is the primary inferential test. For individual predictor significance, the analysis relies on a combination of: (1) p-value thresholds applied consistently (p < 0.05 as the conventional threshold), (2) bootstrap CIs that provide a non-parametric cross-check, and (3) persistence across robustness specifications as the criterion for concluding a finding is robust rather than specification-dependent. Only rural electricity access meets all three criteria, and this is clearly stated in Chapter 4. The pre-registration of the research design, including the nested F-test as the primary inferential procedure, further guards against ex post significance shopping.
+The sequential model-building strategy involves multiple hypothesis tests across multiple model specifications, which in principle inflates the family-wise Type I error rate. With five NLP predictors tested individually in Model F plus seven robustness specifications, there are numerous opportunities for false positives. The nested F-test addresses this for the NLP block as a whole — testing the joint null that all five coefficients are zero simultaneously — and is the primary inferential test. For individual predictor significance, the analysis relies on a combination of: (1) p-value thresholds applied consistently (p < 0.05 as the conventional threshold), (2) bootstrap CIs that provide a non-parametric cross-check, and (3) persistence across robustness specifications as the criterion for concluding a finding is robust rather than specification-dependent. Only rural electricity access meets all three criteria, and this is clearly stated in Chapter 4. The pre-specification of the research design in the research proposal, including the nested F-test as the primary inferential procedure, further guards against ex post significance shopping.
 
 ## 3.7 Robustness Checks
 
@@ -326,7 +326,7 @@ Random Forest (RF) and XGBoost (XGB) regression models were estimated using five
 
 ## 3.9 Bootstrap Confidence Intervals
 
-Bootstrap confidence intervals (1,000 resampling iterations with replacement, stratified by income group) were computed for all five NLP predictor coefficients in Model F, providing non-parametric uncertainty bounds that do not rely on normality assumptions for the error distribution. A 95% CI that excludes zero is interpreted as robust evidence of a non-zero effect.
+Bootstrap confidence intervals (1,000 resampling iterations with replacement) were computed for all five NLP predictor coefficients in Model F, providing non-parametric uncertainty bounds that do not rely on normality assumptions for the error distribution. Sampling is stratified by income quartile — countries are assigned to four strata based on their GDP per capita rank and sampled independently within each stratum — so that every bootstrap replicate preserves the proportion of low-, lower-middle-, upper-middle-, and high-income countries present in the observed sample. A 95% CI that excludes zero is interpreted as robust evidence of a non-zero effect.
 
 ## 3.10 Ethical Considerations
 
@@ -348,7 +348,7 @@ The final strictly aligned corpus contains 127 papers: 113 sourced from OpenAlex
 
 ### 4.2.2 LDA Coherence Results
 
-LDA was estimated across K = 3 to K = 12 topics. The best c_v coherence achieved across the sweep was approximately 0.38, occurring at K = 8. This is substantially below the 0.60 pre-registered threshold in the research proposal. The coherence curve (illustrated in Appendix A, Figure A.1) shows flat or marginally rising coherence across K values, with no clear elbow indicating an optimal topic count, consistent with a corpus that is too small and specialised for reliable LDA inference. Given this result, LDA is presented as exploratory context only and is not used as the primary NLP output. This limitation is acknowledged explicitly: the pre-registered threshold was set in the research proposal before the final corpus size and composition were determined, and a c_v of 0.38, while below the threshold, does not indicate random or meaningless topic extraction — rather, it reflects the inherent challenge of LDA on small technical corpora.
+LDA was estimated across K = 3 to K = 12 topics. The best c_v coherence achieved across the sweep was approximately 0.38, occurring at K = 8. This is substantially below the 0.60 threshold pre-specified in the research proposal. The coherence curve (illustrated in Appendix A, Figure A.1) shows flat or marginally rising coherence across K values, with no clear elbow indicating an optimal topic count, consistent with a corpus that is too small and specialised for reliable LDA inference. Given this result, LDA is presented as exploratory context only and is not used as the primary NLP output. This limitation is acknowledged explicitly: the threshold was pre-specified in the research proposal before the final corpus size and composition were determined, and a c_v of 0.38, while below the threshold, does not indicate random or meaningless topic extraction — rather, it reflects the inherent challenge of LDA on small technical corpora.
 
 ### 4.2.3 NMF Topic Modelling Results (Primary)
 
@@ -397,7 +397,7 @@ The dependent variable (cereal availability) has a moderately right-skewed distr
 
 *[Figure: outputs/figures/choropleth_cereal_availability.png — choropleth map showing quintile bands of kg cereal per person per year across 158 countries, using Robinson projection.]*
 
-Figure 4.1 maps the geographic distribution of the dependent variable across the 158 countries for which FAO Food Balance Sheet data are available. Colour bands represent quintiles of the distribution, with each band containing approximately 32 countries. A notable pattern is that high-income Western nations — including the United States, Canada, Australia, and most of Western Europe — appear in the lower quintiles, while Central and South Asian countries (Afghanistan, Kazakhstan, Uzbekistan) and parts of North Africa appear in the upper quintiles. This counterintuitive pattern reflects the nature of the dependent variable: Element 664 of the FAO Food Balance Sheet captures cereal available for human food consumption specifically, not total agricultural output. In high-income countries, a substantially larger share of cereal production is directed towards animal feed, biofuel feedstock, and industrial processing rather than direct human consumption, which depresses the per capita food supply figure relative to countries where wheat and rice remain the primary staple. This interpretation is reinforced by the robustness check in Section 4.4, which shows that the developing-country subsample (Spec 7) yields a substantially lower R² (0.081), consistent with greater heterogeneity once high-income outliers with diversified food systems are removed.
+Figure 4.1 maps the geographic distribution of the dependent variable across the 158 countries for which FAO Food Balance Sheet data are available. Colour bands represent quintiles of the distribution, with each band containing approximately 32 countries. A notable pattern is that high-income Western nations — including the United States, Canada, Australia, and most of Western Europe — appear in the lower quintiles, while Central and South Asian countries (Afghanistan, Kazakhstan, Uzbekistan) and parts of North Africa appear in the upper quintiles. This counterintuitive pattern reflects the nature of the dependent variable: Element 664 of the FAO Food Balance Sheet captures cereal available for human food consumption specifically, not total agricultural output. In high-income countries, a substantially larger share of cereal production is directed towards animal feed, biofuel feedstock, and industrial processing rather than direct human consumption, which depresses the per capita food supply figure relative to countries where wheat and rice remain the primary staple. This interpretation is reinforced by the robustness check in Section 4.6, which shows that the developing-country subsample (Spec 7) yields a substantially lower R² (0.081), consistent with greater heterogeneity once high-income outliers with diversified food systems are removed.
 
 ### 4.3.1 Model A: Production Baseline
 
@@ -484,6 +484,8 @@ Model F is the full NLP-guided model, adding five NLP-discovered predictors to t
 **Omnibus p = 0.001, Jarque-Bera p = 7.23e−05, Skew = −0.512, Kurtosis = 4.346**
 
 Model F's overall fit (R² = 0.283) represents a substantial improvement over the production baseline (R² = 0.196), with an adjusted R² of 0.224 confirming that the additional predictors earn their degrees of freedom. The two statistically significant predictors are GDP per capita (*** as in all specifications) and rural electricity access (** stable from Model C). The NLP-specific predictors — cereal loss, trade openness, fertiliser efficiency, and food price inflation — do not individually reach significance, though together they contribute to the NLP block's joint significance as established by the nested F-test.
+
+It is also notable that the cereal_loss_pct coefficient reverses sign between models: negative in Model B (−0.006) and positive in Model F (+0.004). This sign flip is a direct consequence of the multicollinearity flagged by the Condition Number of 2,960 — adding fertiliser efficiency, food price inflation, and the other NLP predictors changes the partial correlations among regressors sufficiently to reverse the direction of the PHL coefficient. Both values are non-significant (Model B p = 0.476; Model F p = 0.639), so neither direction can be considered reliable. The direction of the PHL effect on cereal availability cannot be identified from these cross-country specifications.
 
 The Condition Number of 2,960 is flagged as indicative of potential multicollinearity, primarily between GDP per capita and rural electricity access (which are positively correlated across countries: wealthier countries have better electricity infrastructure). This means that individual coefficient estimates in Model F carry greater uncertainty than the standard errors alone suggest, and conclusions about the relative magnitude of specific predictors should be treated with caution. GDP per capita remains the dominant predictor across all specifications, absorbing some of what would otherwise be attributable to electricity access. In Model C (where fertiliser efficiency and food price inflation are absent), the rural electricity coefficient retains similar magnitude and significance, suggesting that the multicollinearity issue in Model F does not fully undermine this finding.
 
@@ -683,6 +685,10 @@ This dissertation takes the position that explicit, detailed acknowledgement of 
 
 **Internal-to-external validity gap.** The RF and XGB cross-validated R² values (0.078 and 0.066 for Model F) are substantially below the OLS R² (0.283), indicating that in-sample OLS fit does not generalise as well as the headline R² suggests. The predictors in Model F are likely capturing a mix of genuine structural associations and in-sample noise that the CV penalty appropriately discounts. This gap is largest in Model F, consistent with the multicollinearity and degrees-of-freedom arguments above.
 
+**Spatial autocorrelation.** A limitation not formally tested in this study is spatial autocorrelation among residuals. Countries share geographic, climatic, and institutional environments with their neighbours — African countries cluster by common rainfall patterns, governance traditions, and infrastructure deficits; European countries cluster by institutional development and market integration. If OLS residuals are spatially clustered, the effective sample size is smaller than N = 160, and standard errors may be understated even after HC3 correction. Future work should apply Moran's I tests to the residuals and consider regional fixed effects or spatially adjusted standard errors as additional robustness checks.
+
+**Fertiliser efficiency instability.** The bootstrap CI for fertiliser_efficiency spans [−0.661, +0.257] — nearly a full unit wide around a point estimate of +0.089. This width, roughly ten times the coefficient magnitude, indicates that the variable contributes noise rather than stable signal to Model F, most likely because the ratio-based construction (cereal yield / fertiliser kg per ha) produces extreme values for countries with near-zero fertiliser application. Future specifications should consider replacing this derived ratio with its component variables separately, or excluding it from Model F entirely given its demonstrated coefficient instability.
+
 **Developing-country subsample (Spec 7).** The collapse of explanatory power in the developing-country subsample (R² = 0.081) is a striking limitation with direct policy relevance. The countries most affected by food insecurity are precisely those where this model explains least. This likely reflects the greater role of conflict, governance failure, informal markets, and extreme weather events in food availability outcomes in developing countries — factors that are either unmeasurable or incompletely proxied by the variables available in FAOSTAT and WDI for this sample.
 
 ### 5.6.1 The Developing-Country Subsample Problem in Depth
@@ -711,7 +717,7 @@ The practical implication is that while the joint significance of the NLP block 
 
 ## 5.7 The NLP-to-Evidence Pipeline: Methodological Contributions and Caveats
 
-The dissertation's methodological contribution — a reproducible pipeline from corpus construction through NLP topic modelling to empirical hypothesis testing — offers a template for future research in food security and adjacent policy domains. Thomas and Harden (2008) argue for methods that can systematically synthesise large qualitative or mixed-methods literature bodies; NLP topic modelling provides such synthesis for quantitative-method corpora.
+The dissertation's methodological contribution — a reproducible pipeline from corpus construction through NLP topic modelling to empirical hypothesis testing — offers a template for future research in food security and adjacent policy domains. A limitation of the corpus as constructed is its geographic concentration: Topic 6 (Africa Value Chain and Investment) is the single largest thematic cluster at 21.3 percent of the strictly aligned papers, meaning the literature-driven variable selection reflects sub-Saharan African agricultural development priorities more heavily than the empirical global sample of 160 countries warrants. Future corpus construction should explicitly track and balance geographic coverage, for example by enforcing a maximum proportion of region-specific papers during the screening stage, to avoid biasing NLP-identified predictors toward one world region. Thomas and Harden (2008) argue for methods that can systematically synthesise large qualitative or mixed-methods literature bodies; NLP topic modelling provides such synthesis for quantitative-method corpora.
 
 The LDA coherence shortfall (c_v ≈ 0.38 vs. 0.60 threshold) highlights a practical limitation: LDA's probabilistic inference performs poorly on small, specialised corpora. NMF's algebraic approach is more robust in this context, producing interpretable topics without requiring the corpus size that LDA needs for reliable inference. Future applications of this pipeline should pre-specify NMF as the primary topic model when corpus size is below approximately 200–300 documents, reserving LDA as a supplementary check in larger corpora.
 
@@ -719,11 +725,11 @@ The seven NMF topics identified in this study align closely with the major thema
 
 ### 5.7.1 The Coherence Threshold and NMF Validity
 
-The pre-registered LDA coherence threshold of 0.60 was not met (c_v ≈ 0.38), which requires a discussion of what this means for the validity of the NLP results. The threshold was set in the research proposal based on the expectation that a 127-paper corpus with consistent vocabulary would be large enough for reliable LDA inference. In practice, specialised technical corpora of this size routinely produce lower coherence because: (i) the vocabulary diversity is lower than in general-purpose text collections, reducing the statistical discriminating power of the topic model; (ii) documents in a specialised corpus share many terms across topics, making topic boundaries blurry; and (iii) the short abstracts typically used (rather than full-text) provide less statistical information per document.
+The LDA coherence threshold of 0.60, pre-specified in the research proposal, was not met (c_v ≈ 0.38), which requires a discussion of what this means for the validity of the NLP results. The threshold was set in the research proposal based on the expectation that a 127-paper corpus with consistent vocabulary would be large enough for reliable LDA inference. In practice, specialised technical corpora of this size routinely produce lower coherence because: (i) the vocabulary diversity is lower than in general-purpose text collections, reducing the statistical discriminating power of the topic model; (ii) documents in a specialised corpus share many terms across topics, making topic boundaries blurry; and (iii) the short abstracts typically used (rather than full-text) provide less statistical information per document.
 
 The NMF result does not require a coherence score in the same sense: its validity is assessed by inspecting whether the topic-word loadings produce semantically coherent clusters that are recognisable to domain experts. The seven NMF topics identified in this study — land and water, household determinants, post-harvest loss, climate change, grain variety, technology adoption, Africa value chain — are all recognisable and well-grounded in the food security literature, consistent with the themes a manual systematic review would identify. This face validity, combined with the corpus alignment statistics (94/127 papers with at least one availability driver theme), provides sufficient confidence in the NMF output to proceed with empirical operationalisation.
 
-Future studies using NLP for literature synthesis should report both LDA and NMF results, use the coherence score to determine which is primary, and pre-register the decision rule (as done here). If LDA coherence falls below threshold, NMF should be used as primary with explicit justification — the approach adopted in this dissertation.
+Future studies using NLP for literature synthesis should report both LDA and NMF results, use the coherence score to determine which is primary, and pre-specify the decision rule in the research proposal (as done here). If LDA coherence falls below threshold, NMF should be used as primary with explicit justification — the approach adopted in this dissertation.
 
 ## 5.8 Implications for Food Security Policy and Research
 
@@ -755,7 +761,7 @@ The implication for model specification is that rural electricity access may its
 
 This dissertation set out to answer the question of which factors emphasised by the food insecurity literature demonstrate measurable predictive value in cross-country machine learning models of cereal food availability, with particular focus on post-harvest loss and financial access. The research pursued this question through a three-stage design: systematic corpus construction and NLP topic modelling (Phase NLP), sequential cross-country regression model building using FAO and World Bank data (Phase Empirical), and formal hypothesis testing of the NLP block's explanatory contribution (Phase Inference).
 
-The NLP stage produced seven coherent thematic clusters from 127 strictly aligned papers, using NMF as the primary topic model after LDA fell below the pre-registered coherence threshold. The themes — land and water resources, household determinants, post-harvest loss and storage, climate change adaptation, grain variety, technology adoption, and Africa value chain investment — represent the food security literature's dominant emphases on the availability side. Post-harvest loss and Africa value chain themes together account for the largest share of the corpus.
+The NLP stage produced seven coherent thematic clusters from 127 strictly aligned papers, using NMF as the primary topic model after LDA fell below the coherence threshold pre-specified in the research proposal. The themes — land and water resources, household determinants, post-harvest loss and storage, climate change adaptation, grain variety, technology adoption, and Africa value chain investment — represent the food security literature's dominant emphases on the availability side. Post-harvest loss and Africa value chain themes together account for the largest share of the corpus.
 
 The empirical stage estimated four primary OLS models with HC3 robust standard errors plus seven robustness specifications and RF/XGB cross-validation. The dependent variable — FAO FBS cereal food supply per capita (kg/year), capturing net national supply after trade and stock adjustments across 160 countries — is appropriate for availability-side modelling. The sequential model build-up shows that the production baseline (R² = 0.196) is improved most by the logistics and infrastructure block (Delta R² = +0.075, Model C) and that the full NLP model achieves R² = 0.283.
 
@@ -855,6 +861,10 @@ Muckenhuber, J., Dorner, T. E., & Burkert, N. T. (2020). Random forest models fo
 
 Mueller, N. D., Gerber, J. S., Johnston, M., Ray, D. K., Ramankutty, N., & Foley, J. A. (2012). Closing yield gaps through nutrient and water management. *Nature*, *490*(7419), 254–257. https://doi.org/10.1038/nature11420
 
+Röder, M., Both, A., & Hinneburg, A. (2015). Exploring the space of topic coherence measures. *Proceedings of the eighth ACM international conference on web search and data mining*, 399–408. https://doi.org/10.1145/2684822.2685324
+
+Sen, A. (1981). *Poverty and famines: An essay on entitlement and deprivation*. Oxford University Press.
+
 Sheahan, M., & Barrett, C. B. (2017). Food loss and waste in Sub-Saharan Africa. *Food Policy*, *70*, 1–12. https://doi.org/10.1016/j.foodpol.2017.03.012
 
 Thomas, J., & Harden, A. (2008). Methods for the thematic synthesis of qualitative research in systematic reviews. *BMC Medical Research Methodology*, *8*(1), 45. https://doi.org/10.1186/1471-2288-8-45
@@ -877,9 +887,41 @@ Zins, A., & Weill, L. (2016). The determinants of financial inclusion in Africa.
 
 ## A.1 LDA Coherence Curve
 
-The LDA coherence curve, produced by `src/step3_find_topics_in_papers.py`, is stored at `outputs/figures/lda_coherence_curve.png`. The curve plots c_v coherence against K (number of topics) for K = 3 to K = 12. The highest coherence achieved is approximately 0.38 at K = 8, which is below the pre-registered 0.60 threshold. The curve is relatively flat across K values, with no clear optimal elbow, confirming that the corpus size (N = 127) is insufficient for reliable LDA inference on this specialised technical vocabulary. This figure should be consulted alongside the NMF results to contextualise the decision to use NMF as the primary topic model.
+The LDA coherence curve, produced by `src/step3_find_topics_in_papers.py`, is stored at `outputs/figures/lda_coherence_curve.png`. The curve plots c_v coherence against K (number of topics) for K = 3 to K = 12. The highest coherence achieved is approximately 0.38 at K = 8, which is below the pre-specified 0.60 threshold. The curve is relatively flat across K values, with no clear optimal elbow, confirming that the corpus size (N = 127) is insufficient for reliable LDA inference on this specialised technical vocabulary. This figure should be consulted alongside the NMF results to contextualise the decision to use NMF as the primary topic model.
 
-## A.2 NMF Topic Detail
+## A.2 NMF Topic Sensitivity Analysis (k = 5 and k = 9)
+
+To assess whether the k = 7 topic solution is robust to the choice of topic number, NMF was additionally estimated at k = 5 and k = 9. Table A.2 presents the top keywords for each topic at each value of k.
+
+**Table A.2: NMF Topic Sensitivity — Top Keywords at k = 5, k = 7 (Primary), and k = 9**
+
+| k | Topic | Top Keywords |
+|---|---|---|
+| 5 | 0 | climate, change, climate change, adaptation, impacts, food security, yields |
+| 5 | 1 | harvest, losses, post harvest, storage, loss, grain, handling |
+| 5 | 2 | waste, global, environmental, land, production, agricultural, nutrition |
+| 5 | 3 | households, food security, household, food availability, insecurity, availability |
+| 5 | 4 | covid, pandemic, rice, health, global |
+| 7 | 0 | land, environmental, soil, crop, resource, production, water, demand *(primary result)* |
+| 7 | 1 | household, determinant, income, education, rural_household, status, availability |
+| 7 | 2 | loss, postharvest_loss, fruit_vegetable, postharvest, grain, storage, stage |
+| 7 | 3 | climate_change, adaptation_strategy, adaptation, impact, farmer, yield |
+| 7 | 4 | rice, yield, variety, silo, wheat, grain, crop, temperature |
+| 7 | 5 | technology, adoption, farmer, storage, investment, improved, phl, sensor |
+| 7 | 6 | africa, economic, production, system, waste, smallholder, value_chain, investment |
+| 9 | 0 | climate, change, adaptation, impacts, food security, adaptation strategies |
+| 9 | 1 | harvest, losses, post harvest, storage, loss, grain, handling |
+| 9 | 2 | land, soil, crop, environmental, production, water, agricultural |
+| 9 | 3 | households, household, food security, food availability, farm, income |
+| 9 | 4 | covid, pandemic, health, initiatives, global |
+| 9 | 5 | rice, rice production, asia, yield, drought, global food |
+| 9 | 6 | trade, openness, trade openness, africa, countries, food security |
+| 9 | 7 | systems, food systems, sustainability, nutrition, sustainable |
+| 9 | 8 | waste, food waste, chain, supply, supply chain, financing, interventions |
+
+The core themes are stable across all three solutions. Post-harvest loss (k=5 Topic 1; k=7 Topic 2; k=9 Topic 1), climate change adaptation (k=5 Topic 0; k=7 Topic 3; k=9 Topic 0), land and water resources (k=5 Topic 2 partially; k=7 Topic 0; k=9 Topic 2), and household determinants (k=5 Topic 3; k=7 Topic 1; k=9 Topic 3) appear consistently across all solutions. At k=9 the corpus produces a distinct trade/openness topic (Topic 6) and a food systems/sustainability topic (Topic 7) not present at k=5 or k=7, reflecting the finer granularity available at higher k. The Africa value chain and investment cluster (k=7 Topic 6) is absorbed into the land/environmental topics at k=5 and partially into the trade/openness topic at k=9, but its constituent keywords (africa, value_chain, smallholder, investment, waste) remain present in the solutions. This stability supports the decision to use k=7 as the primary solution.
+
+## A.3 NMF Topic Detail (Primary k = 7)
 
 NMF topic modelling (k = 7) was conducted using scikit-learn's NMF implementation with alternating least squares initialisation. The full topic-word matrix (topics × vocabulary), document-topic matrix (127 papers × 7 topics), and dominant topic assignments are stored at `data/processed/nmf_availability_topics.csv`. The seven topics and their top keywords are reproduced in Table 3.1 and Table 4.1 of this dissertation. The dominant paper counts (ranging from 7 for Topic 4 to 27 for Topic 6) reflect the natural variation in thematic concentration across the corpus, with the Africa value chain cluster being the most represented.
 
@@ -901,7 +943,49 @@ These null findings are consistent with the theoretical position that financial 
 
 ---
 
-# Appendix C: Robustness Specification Details
+# Appendix C: Multicollinearity Diagnostics
+
+## C.1 Variance Inflation Factors — Model F (12 Predictors)
+
+Variance Inflation Factors (VIF) quantify the degree to which each predictor's variance is inflated by its correlation with other predictors. A VIF above 5 is commonly flagged as indicating meaningful multicollinearity; above 10 is considered severe. The VIF values for all twelve Model F predictors are presented in Table C.1.
+
+**Table C.1: VIF Values — Model F (N = 160, log-transformed predictors)**
+
+| Variable | VIF |
+|---|---|
+| agri_employment_pct | 5.29 |
+| gdp_per_capita_usd | 4.34 |
+| fertiliser_kg_per_ha | 3.45 |
+| rural_electricity_access_pct | 3.13 |
+| rural_population_pct | 2.62 |
+| cereal_yield_kg_per_ha | 2.37 |
+| cereal_loss_pct | 1.97 |
+| fertiliser_efficiency | 1.47 |
+| trade_pct_gdp | 1.28 |
+| livestock_production_index | 1.16 |
+| arable_land_pct | 1.10 |
+| food_price_inflation_pct | 1.06 |
+
+The highest VIF is agri_employment_pct (5.29), marginally above the conventional warning threshold of 5, followed by gdp_per_capita_usd (4.34). No predictor exceeds VIF = 10, which would indicate severe multicollinearity. However, the Condition Number of 2,960 (reported in Section 4.3.5) reflects multicollinearity in the full predictor matrix that pairwise VIFs do not fully capture, particularly involving the GDP per capita — rural electricity access correlation (r = 0.684, Table C.2).
+
+## C.2 Pairwise Correlation Matrix — NLP Predictors and GDP Per Capita
+
+**Table C.2: Pairwise Pearson Correlations (Model F NLP Variables + GDP, N = 160)**
+
+| | GDP/pc | Loss% | Trade% | Elec% | Fert.Eff | FoodCPI |
+|---|---|---|---|---|---|---|
+| GDP per capita | 1.000 | −0.581 | 0.384 | **0.684** | −0.340 | −0.150 |
+| cereal_loss_pct | −0.581 | 1.000 | −0.227 | −0.646 | 0.194 | 0.106 |
+| trade_pct_gdp | 0.384 | −0.227 | 1.000 | 0.202 | −0.139 | −0.169 |
+| rural_electricity_access_pct | **0.684** | −0.646 | 0.202 | 1.000 | −0.367 | −0.103 |
+| fertiliser_efficiency | −0.340 | 0.194 | −0.139 | −0.367 | 1.000 | −0.022 |
+| food_price_inflation_pct | −0.150 | 0.106 | −0.169 | −0.103 | −0.022 | 1.000 |
+
+The strongest correlation is between gdp_per_capita_usd and rural_electricity_access_pct (r = 0.684), which is the primary source of the inflated Condition Number. cereal_loss_pct is also strongly negatively correlated with both GDP (r = −0.581) and rural electricity (r = −0.646), meaning these three variables share a common development gradient and their individual coefficients carry more uncertainty than the joint F-test result.
+
+---
+
+# Appendix C2: Robustness Specification Details
 
 Full robustness specification results are stored at `outputs/tables/robustness_specifications.csv` and `outputs/tables/robustness_model_f.csv`. The seven primary robustness specifications (Specs 1–7) are described and summarised in Section 4.6 of this dissertation. Key additional information on each specification:
 

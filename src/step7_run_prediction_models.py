@@ -1,63 +1,57 @@
 # ============================================================
-# I'm fitting Models A, B, C, D and measuring their performance
+# Step 7: Run prediction models
 # ============================================================
 #
 # What I'm doing here:
 #   I have a master dataset with one row per country.
-#   I fit FOUR regression models, each one adding a new block
-#   of variables to test whether it improves prediction.
+#   I fit five nested OLS models, each adding a new block of
+#   variables to track the marginal contribution to explanatory power.
 #
-#   Model A — Baseline (production factors + income)
-#     Tests: does basic agricultural capacity explain food insecurity?
+#   Model A — Production baseline
+#     Tests: do physical agricultural inputs explain cereal availability?
 #     Predictors: cereal yield, fertiliser use, arable land,
 #                 GDP per capita, rural population,
 #                 agricultural employment, livestock production
 #
 #   Model B — Add Post-Harvest Loss block
-#     Tests: does food LOSS between farm and market matter
-#            beyond production capacity?
+#     Tests: does food loss between farm and market matter
+#            beyond the production baseline?
 #     Add: cereal_loss_pct
 #
-#   Model C — Add National Financial Access block
-#     Tests: does NATIONAL financial inclusion (the old way of
-#            measuring it) improve predictions?
-#     Add: account_ownership_pct, bank_branches_per_100k,
-#          private_credit_pct_gdp
+#   Model C — Add Logistics and Infrastructure block
+#     Tests: do market integration and rural infrastructure improve
+#            predictions above the production + PHL baseline?
+#     Add: trade_pct_gdp, rural_electricity_access_pct
 #
-#   Model D — Value Chain Financial Access block
-#     THIS IS THE KEY CONTRIBUTION OF MY DISSERTATION.
-#     Tests: does financial access measured SPECIFICALLY along
-#            the food value chain (rural people, women farmers,
-#            poorest 40%, agricultural payments, borrowing)
-#            explain food insecurity BETTER than national averages?
-#     Add: account_ownership_rural_pct (instead of national)
-#          account_ownership_female_pct (women grow 60-80% of food)
-#          account_ownership_poorest40_pct (poorest smallholders)
-#          agri_payments_digital_pct (farmers in digital economy)
-#          borrowed_from_bank_pct (credit actually reaching people)
-#          value_chain_finance_score (my composite indicator)
+#   Model A★ — Baseline on NLP sample
+#     The same seven-predictor specification as Model A, estimated on
+#     exactly the same 160-country sample as Model F.
+#     This is the honest comparison baseline for the nested F-test.
 #
-#   Model E — Full Governance Model
-#     Tests: once I control for governance quality, do value chain
-#            finance variables still matter?
-#     Add: wgi_political_stability, wgi_control_of_corruption,
-#          wgi_government_effectiveness
+#   Model F — NLP-Discovered Themes
+#     Tests: do the five NLP-identified predictors jointly add
+#            significant explanatory power over the baseline?
+#     Add: cereal_loss_pct, trade_pct_gdp, rural_electricity_access_pct,
+#          fertiliser_efficiency, food_price_inflation_pct
 #
-#   For every model I use THREE methods:
-#     1. OLS regression   (gives p-values, R², coefficients)
-#     2. Random Forest    (handles non-linear relationships)
-#     3. XGBoost          (boosted trees — often the most accurate)
+#   For every model I use THREE estimators:
+#     1. OLS regression  (gives p-values, R², coefficients)
+#     2. Random Forest   (captures non-linear relationships)
+#     3. XGBoost         (gradient-boosted trees)
 #
-#   I also do 5-fold cross-validation (CV) to check whether each
-#   model generalises to countries it has not seen before.
-#   CV R² is more trustworthy than in-sample R².
+#   5-fold cross-validation (CV) is used for RF and XGB to get
+#   out-of-sample R² as a generalisation check.
+#   CV R² is more trustworthy than in-sample OLS R².
 #
-#   Finally I compute SHAP values for the Random Forest model
-#   to show exactly which variables matter most.
+#   I also compute:
+#     - SHAP values for Random Forest (variable importance)
+#     - Bootstrap confidence intervals (1000 iterations, stratified
+#       by income quartile) for all Model F NLP predictors
+#     - A nested F-test comparing Model A★ to Model F
 #
 # Dependent variable:
-#   Prevalence of undernourishment (% of population) — 2021
-#   Higher values = worse food insecurity.
+#   Cereal food availability per capita (kg/person/year) — 2021
+#   FAO Food Balance Sheet, Item 2905, Element 664.
 # ============================================================
 
 # I suppress warning messages to keep the output readable
@@ -863,6 +857,29 @@ def bootstrap_coefs(df, predictor_cols, outcome_col, n_iter=N_BOOT):
     if len(X_all) < 30:
         return pd.DataFrame()
 
+    # Stratify by income quartile so that each bootstrap sample preserves the
+    # proportion of low / lower-middle / upper-middle / high income countries.
+    # GDP per capita (log-transformed in X_all) is used as the stratifier.
+    # We assign each country to one of four groups based on its GDP rank.
+    gdp_col = "gdp_per_capita_usd"
+    if gdp_col in used:
+        gdp_ranks = X_all[gdp_col].rank(pct=True)
+    else:
+        gdp_ranks = pd.Series(range(len(X_all)), index=X_all.index) / len(X_all)
+
+    income_group = []
+    for rank_val in gdp_ranks:
+        if rank_val <= 0.25:
+            income_group.append(0)
+        elif rank_val <= 0.50:
+            income_group.append(1)
+        elif rank_val <= 0.75:
+            income_group.append(2)
+        else:
+            income_group.append(3)
+
+    income_group_series = pd.Series(income_group, index=X_all.index)
+
     # I build the store dictionary without a dict comprehension
     store = {}
     for c in used:
@@ -870,8 +887,20 @@ def bootstrap_coefs(df, predictor_cols, outcome_col, n_iter=N_BOOT):
 
     rng = np.random.default_rng(RANDOM_SEED)
     for _ in range(n_iter):
-        idx = rng.choice(len(X_all), len(X_all), replace=True)
-        Xb, yb = X_all.iloc[idx], y_all.iloc[idx]
+        # Sample within each income stratum, then combine
+        sampled_idx = []
+        for group_id in range(4):
+            group_positions = [
+                i for i, g in enumerate(income_group) if g == group_id
+            ]
+            if len(group_positions) == 0:
+                continue
+            drawn = rng.choice(group_positions, len(group_positions), replace=True)
+            for d in drawn:
+                sampled_idx.append(d)
+
+        Xb = X_all.iloc[sampled_idx]
+        yb = y_all.iloc[sampled_idx]
         try:
             m = sm.OLS(yb, sm.add_constant(Xb)).fit()
             for c in used:
