@@ -90,21 +90,30 @@ production + imports − exports ± stocks, not just domestic production.
 
 ## Known data gap — Findex Tier-1 variables
 
-Three variables intended for `value_chain_finance_score` **cannot be downloaded from the
-World Bank API**:
-- `account_ownership_rural_pct` (FX.OWN.TOTL.RU.ZS)
-- `borrowed_from_bank_pct` (FX.TRN.BORR.ZS)
-- `agri_payments_digital_pct` (FX.TRN.AGRI.ZS)
+**Partially resolved.** Two of the three Tier-1 variables are now populated in
+`data/raw/findex_2021.csv` via the World Bank API (source=14, Findex indicator codes):
 
-The API returns no data for these regardless of source parameter (tried source=14, 71, 89).
-They must be downloaded manually from https://www.worldbank.org/en/publication/globalfindex
+| Variable | API code | Status | Countries |
+|---|---|---|---|
+| `borrowed_from_bank_pct` | `fin22a` | **Available** (source=14) | 128 |
+| `agri_payments_digital_pct` | `fin42 − fin43c` | **Available** (source=14, derived) | 128 |
+| `account_ownership_rural_pct` | `FX.OWN.TOTL.RU.ZS` | **Not available via any API** | 0 |
 
-A helper script is provided: `scripts/parse_findex_manual_download.py`
-Once you download the Excel file, run that script to extract and merge these columns.
+`agri_payments_digital_pct` is derived as `fin42` (% adults who received any agricultural
+payment) minus `fin43c` (% who received in cash only) — the remainder is the share who
+received payments into a financial account or via mobile money.
+
+**Remaining manual step — rural account ownership only:**
+`account_ownership_rural_pct` must be downloaded manually:
+1. Go to https://www.worldbank.org/en/publication/globalfindex
+2. Download the Global Findex 2021 Data Excel file
+3. Save as `data/raw/findex_2021_manual.xlsx`
+4. Run: `python scripts/parse_findex_manual_download.py`
 
 Currently `value_chain_finance_score` is computed from Tier-2/3 variables only
-(female account ownership, poorest-40% ownership, bank branches, ATMs, private credit).
-The dissertation should note this limitation.
+plus the newly added `borrowed_from_bank_pct` and `agri_payments_digital_pct`.
+`account_ownership_rural_pct` remains missing; note this residual limitation in the
+dissertation.
 
 ---
 
