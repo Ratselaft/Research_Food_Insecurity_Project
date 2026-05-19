@@ -323,8 +323,8 @@ for idx in range(best_k):
     })
 
 mapping_df = pd.DataFrame(rows)
-mapping_df.to_csv('data/processed/phase_A_theme_variable_mapping.csv', index=False)
-print("\nMapping template saved → data/processed/phase_A_theme_variable_mapping.csv")
+mapping_df.to_csv('data/processed/step3_theme_variable_mapping.csv', index=False)
+print("\nMapping template saved → data/processed/step3_theme_variable_mapping.csv")
 
 
 # ============================================================

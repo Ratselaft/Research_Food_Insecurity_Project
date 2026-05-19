@@ -123,8 +123,8 @@ if os.path.exists("data/processed/nmf_availability_topics.csv"):
     print("  Saved: page2_nmf_topics.csv")
 
 # ── 2b. Theme → variable mapping ──────────────────────────────────────────
-if os.path.exists("data/processed/phase_A_theme_variable_mapping.csv"):
-    map_raw = pd.read_csv("data/processed/phase_A_theme_variable_mapping.csv")
+if os.path.exists("data/processed/step3_theme_variable_mapping.csv"):
+    map_raw = pd.read_csv("data/processed/step3_theme_variable_mapping.csv")
     map_raw = map_raw.rename(columns={
         "theme_label":    "NLP Theme",
         "proxy_variable": "Proxy Variable (Model F)",
