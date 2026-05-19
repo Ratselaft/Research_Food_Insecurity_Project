@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # ─────────────────────────────────────────────────────────────────────────────
-# run_pipeline.sh — executes all seven phases in order
+# run_pipeline.sh — executes all ten steps in order
 #
-# Each phase feeds the next. The script stops immediately if any phase fails
+# Each step feeds the next. The script stops immediately if any step fails
 # so you never silently run downstream steps on broken inputs.
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -13,44 +13,44 @@ echo "  Food Insecurity NLP/ML Pipeline"
 echo "========================================================"
 
 echo ""
-echo "── Phase A1: Fetch papers from OpenAlex ──────────────"
-python src/phase_a1_fetch_papers_from_openalex.py
+echo "── Step 1: Collect research papers ──────────────────"
+python src/step1_collect_research_papers.py
 
 echo ""
-echo "── Phase A2: Extract text from PDFs ──────────────────"
-python src/phase_a2_extract_text_from_pdfs.py
+echo "── Step 2: Read text from PDFs ──────────────────────"
+python src/step2_read_text_from_pdfs.py
 
 echo ""
-echo "── Phase A3: LDA topic modelling ─────────────────────"
-python src/phase_a3_lda_topic_modelling.py
+echo "── Step 3: Find topics in papers ────────────────────"
+python src/step3_find_topics_in_papers.py
 
 echo ""
-echo "── Phase A4: Score aligned literature ────────────────"
-python src/phase_a4_score_aligned_literature.py
+echo "── Step 4: Score and filter papers ──────────────────"
+python src/step4_score_and_filter_papers.py
 
 echo ""
-echo "── Phase B: Download country datasets ────────────────"
-python src/phase_b_download_country_datasets.py
+echo "── Step 5: Download country data ────────────────────"
+python src/step5_download_country_data.py
 
 echo ""
-echo "── Phase C: Clean and merge master dataset ───────────"
-python src/phase_c_clean_and_merge_master_dataset.py
+echo "── Step 6: Clean and combine data ───────────────────"
+python src/step6_clean_and_combine_data.py
 
 echo ""
-echo "── Phase D: OLS, Random Forest, XGBoost ─────────────"
-python src/phase_d_ols_randomforest_xgboost.py
+echo "── Step 7: Run prediction models ────────────────────"
+python src/step7_run_prediction_models.py
 
 echo ""
-echo "── Phase E: Outlier and robustness checks ────────────"
-python src/phase_e_outlier_and_robustness_checks.py
+echo "── Step 8: Check results are reliable ───────────────"
+python src/step8_check_results_are_reliable.py
 
 echo ""
-echo "── Phase F: NLP-to-empirical synthesis ───────────────"
-python src/phase_f_nlp_to_empirical_synthesis.py
+echo "── Step 9: Write the findings report ────────────────"
+python src/step9_write_the_findings_report.py
 
 echo ""
-echo "── Phase G: Power BI export ──────────────────────────"
-python src/phase_g_powerbi_export.py
+echo "── Step 10: Export for dashboard ────────────────────"
+python src/step10_export_for_dashboard.py
 
 echo ""
 echo "========================================================"

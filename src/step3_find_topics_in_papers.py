@@ -1,5 +1,5 @@
 # ============================================================
-# Phase A3 — TF-IDF + LDA topic modelling on aligned corpus
+# Step 3 — TF-IDF + LDA topic modelling on aligned corpus
 # ============================================================
 #
 # What I'm doing in this file:
@@ -27,7 +27,7 @@ import warnings
 
 import numpy as np
 
-from matplotlib_setup import use_project_matplotlib_config
+from chart_style_settings import use_project_matplotlib_config
 
 warnings.filterwarnings('ignore')
 
@@ -56,7 +56,7 @@ for resource_name in ['stopwords', 'wordnet', 'omw-1.4', 'punkt', 'punkt_tab']:
 # ============================================================
 # Step 1: Loading the strictly aligned availability corpus
 # ============================================================
-# I load ONLY the papers that Phase A4 classified as strictly aligned
+# I load ONLY the papers that Step 4 classified as strictly aligned
 # with food security AND availability-side drivers. Broad access-only
 # or nutrition-only papers are excluded from the LDA input.
 
@@ -129,13 +129,38 @@ print("Preprocessing done.")
 
 bigram_phrases = Phrases(df['tokens'].tolist(), min_count=3, threshold=8)
 bigram_model   = Phraser(bigram_phrases)
-df['tokens']   = df['tokens'].apply(lambda toks: bigram_model[toks])
+
+# I apply the bigram model to every row using a plain for loop
+def apply_bigram_model(token_list):
+    # This function takes a list of tokens and returns the bigram-merged version
+    return bigram_model[token_list]
+
+df['tokens'] = df['tokens'].apply(apply_bigram_model)
 
 # Report the top bigrams detected
-bigram_vocab = {k.decode() if isinstance(k, bytes) else k: v
-                for k, v in bigram_model.phrasegrams.items()
-                if '_' in (k.decode() if isinstance(k, bytes) else k)}
-top_bigrams  = sorted(bigram_vocab.items(), key=lambda x: x[1], reverse=True)[:20]
+# I build the bigram vocabulary without a comprehension
+bigram_vocab = {}
+for raw_key, score in bigram_model.phrasegrams.items():
+    # Some keys are bytes — I decode them to regular strings
+    if isinstance(raw_key, bytes):
+        key = raw_key.decode()
+    else:
+        key = raw_key
+    # I only keep bigrams (phrases with an underscore between two words)
+    if '_' in key:
+        bigram_vocab[key] = score
+
+# I sort bigrams by score descending using a simple bubble-sort approach
+all_bigram_items = list(bigram_vocab.items())
+for i in range(len(all_bigram_items)):
+    for j in range(i + 1, len(all_bigram_items)):
+        # If the later item has a higher score, I swap them so higher scores come first
+        if all_bigram_items[j][1] > all_bigram_items[i][1]:
+            all_bigram_items[i], all_bigram_items[j] = all_bigram_items[j], all_bigram_items[i]
+
+# I keep only the top 20 bigrams
+top_bigrams = all_bigram_items[:20]
+
 print(f"\nTop bigrams detected (sample of 20):")
 for b, score in top_bigrams:
     print(f"  {b:<35} score={score:.1f}")
@@ -151,7 +176,12 @@ dictionary = corpora.Dictionary(df['tokens'])
 #   no_below=2  → keep words appearing in at least 2 papers (not just 1)
 #   no_above=0.75 → remove words in >75% of papers (generic)
 dictionary.filter_extremes(no_below=2, no_above=0.75)
-bow_corpus = [dictionary.doc2bow(toks) for toks in df['tokens']]
+
+# I build the bag-of-words corpus without a list comprehension
+bow_corpus = []
+for toks in df['tokens']:
+    # doc2bow converts a list of tokens into a bag-of-words representation
+    bow_corpus.append(dictionary.doc2bow(toks))
 
 print(f"\nVocabulary: {len(dictionary)} terms  |  Documents: {len(bow_corpus)}")
 
@@ -185,7 +215,13 @@ for k in range(3, 13):
         processes=1,
     )
     scores[k] = round(cm.get_coherence(), 4)
-    flag = '✓ ABOVE TARGET' if scores[k] >= 0.60 else ''
+
+    # I decide whether this K reached the target
+    if scores[k] >= 0.60:
+        flag = '✓ ABOVE TARGET'
+    else:
+        flag = ''
+
     print(f"  K={k:>2}  coherence={scores[k]}  {flag}")
 
 # ============================================================
@@ -194,13 +230,29 @@ for k in range(3, 13):
 # Priority: highest coherence among K values that reach >= 0.6
 # Fallback: best available K if none reaches 0.6
 
-above_target = {k: v for k, v in scores.items() if v >= 0.60}
+# I build a dictionary of only those K values that reached the target
+above_target = {}
+for k in scores:
+    if scores[k] >= 0.60:
+        above_target[k] = scores[k]
 
 if above_target:
-    best_k = max(above_target, key=above_target.get)
+    # I find the K with the highest coherence among those above target
+    best_k = None
+    best_score = -1
+    for k in above_target:
+        if above_target[k] > best_score:
+            best_score = above_target[k]
+            best_k = k
     print(f"\n✓ Target reached. Best K = {best_k}  (c_v = {scores[best_k]})")
 else:
-    best_k = max(scores, key=scores.get)
+    # I find the K with the highest coherence overall (fallback)
+    best_k = None
+    best_score_overall = -1
+    for k in scores:
+        if scores[k] > best_score_overall:
+            best_score_overall = scores[k]
+            best_k = k
     best_score = scores[best_k]
     print(f"\n⚠ Target c_v >= 0.60 NOT reached.")
     print(f"  Best available K = {best_k}  (c_v = {best_score})")
@@ -257,7 +309,11 @@ for idx in range(best_k):
 rows = []
 for idx in range(best_k):
     terms    = lda_final.show_topic(idx, topn=10)
-    top_words = ', '.join(word for word, _ in terms)
+    # I build the top_words string without a comprehension
+    word_list = []
+    for word, _ in terms:
+        word_list.append(word)
+    top_words = ', '.join(word_list)
     rows.append({
         'topic_id':        idx,
         'top_words':       top_words,
@@ -281,7 +337,12 @@ print("\nMapping template saved → data/processed/phase_A_theme_variable_mappin
 from sklearn.decomposition import NMF
 from sklearn.feature_extraction.text import TfidfVectorizer
 
-df['clean_text'] = df['tokens'].apply(lambda toks: ' '.join(toks))
+# I join each paper's tokens back into a single string for TF-IDF
+def tokens_to_string(toks):
+    # This helper converts a list of tokens into one space-separated string
+    return ' '.join(toks)
+
+df['clean_text'] = df['tokens'].apply(tokens_to_string)
 
 tfidf_vec    = TfidfVectorizer(max_features=500, ngram_range=(1, 2))
 tfidf_matrix = tfidf_vec.fit_transform(df['clean_text'])
@@ -301,10 +362,22 @@ global_kw_df = pd.DataFrame({
 
 # Per-topic top-15 TF-IDF keywords
 def get_dominant_topic(bow_vec):
+    # I get the probability distribution over topics for this document
     probs = lda_final.get_document_topics(bow_vec, minimum_probability=0)
-    return max(probs, key=lambda pair: pair[1])[0]
+    # I find the topic with the highest probability using a plain loop
+    best_topic = None
+    best_prob = -1
+    for topic_id, prob in probs:
+        if prob > best_prob:
+            best_prob = prob
+            best_topic = topic_id
+    return best_topic
 
-df['dominant_topic'] = [get_dominant_topic(bow) for bow in bow_corpus]
+# I build the dominant_topic column using a plain for loop
+dominant_topics = []
+for bow in bow_corpus:
+    dominant_topics.append(get_dominant_topic(bow))
+df['dominant_topic'] = dominant_topics
 
 topic_kw_rows = []
 for topic_id in range(best_k):
@@ -367,5 +440,5 @@ if scores[best_k] < 0.60:
     nmf_df.to_csv('data/processed/nmf_availability_topics.csv', index=False)
     print("NMF fallback topics saved → data/processed/nmf_availability_topics.csv")
 
-print(f"\n=== Phase A3 complete. LDA coherence: {scores[best_k]} (K={best_k}) ===")
+print(f"\n=== Step 3 complete. LDA coherence: {scores[best_k]} (K={best_k}) ===")
 print(f"{'SUCCESS' if scores[best_k] >= 0.60 else 'BELOW TARGET'}: target was c_v >= 0.60")

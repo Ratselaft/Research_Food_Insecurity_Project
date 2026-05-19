@@ -3,9 +3,9 @@
 # ============================================================
 #
 # What I'm doing here:
-#   Phase B downloaded 9 different dataset files. Now I need to
+#   Step 5 downloaded 9 different dataset files. Now I need to
 #   clean each one and join them all into a single table —
-#   one row per country — ready for modelling in Phase D.
+#   one row per country — ready for modelling in Step 7.
 #
 # What has changed in this improved version:
 #   - I now use the APHLIS + FAO FBS combined PHL dataset
@@ -29,7 +29,7 @@
 #
 # The final master dataset has one row per country, with every
 # indicator as a separate column. Missing values are allowed —
-# Phase D handles them by only using countries with complete
+# Step 7 handles them by only using countries with complete
 # data for each model specification.
 # ============================================================
 
@@ -45,7 +45,7 @@ import pandas as pd
 os.makedirs("data/processed", exist_ok=True)
 
 # I let the user know I'm starting
-print("Starting Phase C — cleaning and merging datasets...")
+print("Starting Step 6 — cleaning and merging datasets...")
 print("=" * 60)
 
 
@@ -276,7 +276,7 @@ if os.path.exists(WGI_FILE):
         print("  WGI file is empty (placeholder) — download manually from:")
         print("  https://info.worldbank.org/governance/wgi/")
 else:
-    print("  WGI file not found — run Phase B first")
+    print("  WGI file not found — run Step 5 first")
 
 
 # ============================================================
@@ -470,14 +470,17 @@ for col in ["account_ownership_female_pct", "account_ownership_poorest40_pct"]:
         VCHAIN_COMPONENTS.append(col)
 
 # Tier 3 — broad financial infrastructure (scaled to 0–100)
-for col, raw_col in [
+# I define pairs of (scaled column name, raw column name)
+tier3_pairs = [
     ("bank_branches_scaled", "bank_branches_per_100k"),
     ("atm_scaled",           "atm_per_100k"),
     ("credit_scaled",        "private_credit_pct_gdp"),
-]:
+]
+for col, raw_col in tier3_pairs:
     if raw_col in master.columns:
         col_max = master[raw_col].max()
         if pd.notna(col_max) and col_max > 0:
+            # I scale this variable to 0–100 by dividing by its maximum
             master[col] = (master[raw_col] / col_max * 100).round(2)
             VCHAIN_COMPONENTS.append(col)
 
@@ -490,7 +493,7 @@ if len(VCHAIN_COMPONENTS) > 0:
     print("  value_chain_finance_score computed for", non_null, "countries")
 else:
     print("  No financial access data available for value chain score")
-    print("  Check that Phase B downloaded findex_2021.csv and imf_financial_access.csv")
+    print("  Check that Step 5 downloaded findex_2021.csv and imf_financial_access.csv")
 
 
 # ============================================================
@@ -563,10 +566,13 @@ if "poverty_headcount_pct_215" in master_clean.columns:
     preview_cols.append("poverty_headcount_pct_215")
 
 # I only show columns that actually exist
-available_preview = [c for c in preview_cols if c in master_clean.columns]
+available_preview = []
+for c in preview_cols:
+    if c in master_clean.columns:
+        available_preview.append(c)
 print(master_clean[available_preview].head(10).to_string(index=False))
 
 print("\n" + "=" * 60)
-print("PHASE C COMPLETE")
-print("Next step: Phase D — fit Models A, B, C, D, E, F")
+print("STEP 6 COMPLETE")
+print("Next step: Step 7 — fit Models A, B, C, D, E, F")
 print("=" * 60)

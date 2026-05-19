@@ -218,7 +218,7 @@ def get_abstract_from_text(text):
         return abstract[:3000]
 
     # If there's no "abstract" section, I take the first 4000 characters.
-    # A longer window gives the scorer in Phase A4 more text to match against,
+    # A longer window gives the scorer in Step 4 more text to match against,
     # which matters especially for papers whose key terms appear in the intro.
     return text[:4000].strip()
 

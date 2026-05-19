@@ -3,7 +3,7 @@
 # ============================================================
 #
 # What I'm doing here:
-#   Phase D gave me results I'm happy with. But I need to check
+#   Step 7 gave me results I'm happy with. But I need to check
 #   whether those results are reliable, or whether they're being
 #   driven by just one or two unusual countries.
 #
@@ -20,7 +20,7 @@
 #      I re-run Model A five different ways. If the main findings
 #      hold up across all five, I can call them robust.
 #
-#      Spec 1 — Baseline (exactly as in Phase D)
+#      Spec 1 — Baseline (exactly as in Step 7)
 #      Spec 2 — Add climate variable (average precipitation)
 #      Spec 3 — Log-transform the dependent variable
 #      Spec 4 — Drop Cook's Distance outliers and re-run
@@ -35,7 +35,7 @@ warnings.filterwarnings('ignore')
 # I need os to create folders
 import os
 
-from matplotlib_setup import use_project_matplotlib_config
+from chart_style_settings import use_project_matplotlib_config
 
 use_project_matplotlib_config()
 # I need matplotlib to draw charts
@@ -66,7 +66,7 @@ os.makedirs("outputs/figures", exist_ok=True)
 RANDOM_SEED = 42
 
 # I let the user know I'm starting
-print("Starting Phase E — outlier detection and robustness checks...")
+print("Starting Step 8 — outlier detection and robustness checks...")
 print("=" * 60)
 
 
@@ -82,7 +82,7 @@ master = pd.read_csv("data/processed/master_dataset_with_dv.csv")
 # I let the user know how many countries I've loaded
 print(f"  Countries loaded: {len(master)}")
 
-# I list the predictors I use in Model A — must match Phase D exactly
+# I list the predictors I use in Model A — must match Step 7 exactly
 MODEL_A_VARS = [
     "cereal_yield_kg_per_ha",
     "fertiliser_kg_per_ha",
@@ -101,12 +101,12 @@ DV = "cereal_availability_kg_pc"
 if DV in master.columns:
     master["cereal_availability_kg_pc_raw"] = master[DV].clip(lower=0).copy()
 
-# I log-transform exactly the same columns Phase D logs.
-# Phase D logs the DV (right-skewed, range 5–1,500+ kg/person) and the
+# I log-transform exactly the same columns Step 7 logs.
+# Step 7 logs the DV (right-skewed, range 5–1,500+ kg/person) and the
 # three skewed predictors in Model A. Matching this exactly ensures Spec 1
-# replicates Phase D's Model A result.
+# replicates Step 7's Model A result.
 LOG_COLS = [
-    "cereal_availability_kg_pc",  # DV: log-transform matches Phase D
+    "cereal_availability_kg_pc",  # DV: log-transform matches Step 7
     "gdp_per_capita_usd",
     "cereal_yield_kg_per_ha",
     "fertiliser_kg_per_ha",
@@ -389,7 +389,7 @@ def fit_ols_spec(X, y, spec_name):
 # I'll collect the results from all five specs in this list
 spec_results = []
 
-# ── Spec 1: I'm running the baseline (same as Phase D Model A) ─────────────
+# ── Spec 1: I'm running the baseline (same as Step 7 Model A) ─────────────
 print("\nSpec 1 — Baseline (full sample, Model A predictors)")
 row1, m1 = fit_ols_spec(X_base, y, "Spec 1 — Baseline")
 spec_results.append(row1)
@@ -437,7 +437,7 @@ else:
 # ── Spec 3: I'm using the raw (unlogged) DV — sensitivity to log spec ────────
 print("\nSpec 3 — Level DV (raw cereal availability, sensitivity to log spec)")
 
-# The baseline uses log-transformed cereal_availability_kg_pc (matching Phase D).
+# The baseline uses log-transformed cereal_availability_kg_pc (matching Step 7).
 # This spec checks whether the main findings survive on the raw kg/person scale.
 if "cereal_availability_kg_pc_raw" in working.columns:
     y3 = working["cereal_availability_kg_pc_raw"]
@@ -497,8 +497,12 @@ print("\nSpec 6 — Add WGI political stability (governance control)")
 
 wgi_col = "wgi_political_stability"
 if wgi_col in master.columns:
-    cols_spec6 = [c for c in MODEL_A_VARS + [DV, wgi_col, "country_name"]
-                  if c in master.columns]
+    # I build the list of columns I need for Spec 6
+    cols_spec6 = []
+    for c in MODEL_A_VARS + [DV, wgi_col, "country_name"]:
+        if c in master.columns:
+            cols_spec6.append(c)
+
     working_wgi = master[cols_spec6].dropna().copy()
 
     if len(working_wgi) >= 30:
@@ -508,13 +512,23 @@ if wgi_col in master.columns:
         spec_results.append(row6)
         wgi_coef = m6.params.get(wgi_col, np.nan)
         wgi_pval = m6.pvalues.get(wgi_col, np.nan)
-        wgi_sig  = "***" if wgi_pval < 0.01 else "**" if wgi_pval < 0.05 else "*" if wgi_pval < 0.10 else ""
+
+        # I work out the significance stars for the WGI variable
+        if wgi_pval < 0.01:
+            wgi_sig = "***"
+        elif wgi_pval < 0.05:
+            wgi_sig = "**"
+        elif wgi_pval < 0.10:
+            wgi_sig = "*"
+        else:
+            wgi_sig = ""
+
         print(f"  N={row6['N']}  R²={row6['R²']}  Adj R²={row6['Adj R²']}")
         print(f"  wgi_political_stability coef={wgi_coef:.3f}  p={wgi_pval:.4f}  {wgi_sig}")
     else:
         print(f"  Skipped — only {len(working_wgi)} complete rows")
 else:
-    print("  Skipped — wgi_political_stability not in master (run Phase B + Phase C first)")
+    print("  Skipped — wgi_political_stability not in master (run Step 5 + Step 6 first)")
 
 
 # ── Spec 7: Developing countries only (GDP per capita < USD 12,535) ──────────
@@ -611,7 +625,13 @@ print("\n[8] Saving robustness coefficient plot...")
 # I show the three most dissertation-relevant predictors from Model A
 key_vars_to_plot = []
 for v in ["gdp_per_capita_usd", "agri_employment_pct", "cereal_yield_kg_per_ha"]:
-    if any(v + "_coef" in r for r in spec_results):
+    # I check whether this variable has a coefficient entry in any spec result
+    variable_found = False
+    for r in spec_results:
+        if v + "_coef" in r:
+            variable_found = True
+            break
+    if variable_found:
         key_vars_to_plot.append(v)
 
 # I set up one subplot per variable
@@ -641,9 +661,14 @@ for ax_index in range(len(key_vars_to_plot)):
             coefs.append(r[var + "_coef"])
             sigs.append(r.get(var + "_sig", ""))
 
+    # I build the list of bar colours for this subplot
+    bar_colours = []
+    for i in range(len(coefs)):
+        bar_colours.append(colours[i])
+
     # I draw the bars
     bars = ax.bar(range(len(coefs)), coefs,
-                  color=[colours[i] for i in range(len(coefs))],
+                  color=bar_colours,
                   edgecolor="black", linewidth=0.5)
 
     # I add significance stars on top of each bar
@@ -665,7 +690,11 @@ for ax_index in range(len(key_vars_to_plot)):
 
     # I label the x ticks as S1, S2, etc.
     ax.set_xticks(range(len(spec_labels)))
-    ax.set_xticklabels(["S" + str(i + 1) for i in range(len(spec_labels))], fontsize=9)
+    # I build the x-axis tick labels S1, S2, ... one at a time
+    tick_labels = []
+    for i in range(len(spec_labels)):
+        tick_labels.append("S" + str(i + 1))
+    ax.set_xticklabels(tick_labels, fontsize=9)
 
     # I label the y axis
     ax.set_ylabel("OLS coefficient")
@@ -693,13 +722,13 @@ print("  Coefficient stability chart saved → outputs/figures/robustness_coeffi
 # Step 10: Model F robustness — do the NLP findings hold up?
 # ============================================================
 # NLP-discovered availability-side themes tested in Model F:
-#   cereal_loss_pct               (Topic 7: post-harvest loss — n.s. in Phase D)
-#   lpi_overall                   (Topic 3: logistics — n.s. in Phase D)
-#   rural_electricity_access_pct  (Topics 2/4: infrastructure — n.s. in Phase D)
-#   fertiliser_efficiency         (Topic 6: input efficiency — n.s. in Phase D)
-#   food_price_inflation_pct      (Topic 1: price signal — n.s. in Phase D)
+#   cereal_loss_pct               (Topic 7: post-harvest loss — n.s. in Step 7)
+#   lpi_overall                   (Topic 3: logistics — n.s. in Step 7)
+#   rural_electricity_access_pct  (Topics 2/4: infrastructure — n.s. in Step 7)
+#   fertiliser_efficiency         (Topic 6: input efficiency — n.s. in Step 7)
+#   food_price_inflation_pct      (Topic 1: price signal — n.s. in Step 7)
 #
-# All NLP bootstrap CIs crossed zero in Phase D.
+# All NLP bootstrap CIs crossed zero in Step 7.
 # These robustness specs test whether the NLP null result is stable across
 # alternative samples and specifications, and whether the robust predictors
 # (arable_land, GDP, rural_population) hold in every sub-sample.
@@ -719,12 +748,12 @@ MODEL_F_VARS_E = [
     "food_price_inflation_pct",      # NMF Topic 3: market signal of availability disruption
 ]
 MODEL_F_LOG_E = [
-    "cereal_availability_kg_pc",     # DV: log-transform matches Phase D
+    "cereal_availability_kg_pc",     # DV: log-transform matches Step 7
     "gdp_per_capita_usd",
     "cereal_yield_kg_per_ha",
     "fertiliser_kg_per_ha",
     "fertiliser_efficiency",
-    "trade_pct_gdp",                 # log-transform matches Phase D
+    "trade_pct_gdp",                 # log-transform matches Step 7
 ]
 NLP_FOCUS = ["cereal_loss_pct", "trade_pct_gdp", "rural_electricity_access_pct"]
 
@@ -736,16 +765,31 @@ for col in MODEL_F_LOG_E:
     if col in master_f.columns:
         master_f[col] = np.log1p(master_f[col].clip(lower=0))
 
-f_needed = [c for c in MODEL_F_VARS_E + [DV, "cereal_availability_kg_pc_raw",
-            "country_name", "country_code"] if c in master_f.columns]
-working_f = master_f[f_needed].dropna(subset=[c for c in MODEL_F_VARS_E + [DV]
-                                               if c in master_f.columns]).reset_index(drop=True)
+# I build f_needed by looping — keeping only columns that exist in master_f
+f_needed = []
+for c in MODEL_F_VARS_E + [DV, "cereal_availability_kg_pc_raw", "country_name", "country_code"]:
+    if c in master_f.columns:
+        f_needed.append(c)
+
+# I build the dropna subset by looping — only existing columns
+dropna_subset = []
+for c in MODEL_F_VARS_E + [DV]:
+    if c in master_f.columns:
+        dropna_subset.append(c)
+
+working_f = master_f[f_needed].dropna(subset=dropna_subset).reset_index(drop=True)
 print(f"\n  Model F working dataset: {len(working_f)} countries")
 
 spec_f_results = []
 
 if len(working_f) >= 30:
-    X_fb = working_f[[c for c in MODEL_F_VARS_E if c in working_f.columns]]
+    # I build the list of Model F predictor columns that exist in working_f
+    model_f_cols = []
+    for c in MODEL_F_VARS_E:
+        if c in working_f.columns:
+            model_f_cols.append(c)
+
+    X_fb = working_f[model_f_cols]
     y_fb = working_f[DV]
 
     # ── Spec F1: Model F baseline ─────────────────────────────
@@ -768,7 +812,7 @@ if len(working_f) >= 30:
 
     # ── Spec F3: Level DV (raw cereal availability) ───────────────────────────
     print("\n  Spec F3 — Level DV (raw cereal availability, sensitivity to log spec)")
-    # The baseline uses log-transformed DV matching Phase D.
+    # The baseline uses log-transformed DV matching Step 7.
     # This checks whether NLP null results hold on the raw kg/person scale.
     if "cereal_availability_kg_pc_raw" in working_f.columns:
         y_f3 = working_f["cereal_availability_kg_pc_raw"]
@@ -827,10 +871,10 @@ else:
 
 
 print(f"\n{'='*60}")
-print("PHASE E COMPLETE — Key Findings")
+print("STEP 8 COMPLETE — Key Findings")
 print(f"{'='*60}")
 print("""
-DV: cereal_availability_kg_pc (log-transformed, matching Phase D)
+DV: cereal_availability_kg_pc (log-transformed, matching Step 7)
     = cereal production per capita (kg/person/year, 2021)
 
 What I checked:
@@ -844,7 +888,7 @@ How to use this in my dissertation:
     are the robust core findings — check they survive Specs 1-7
   - NLP variables (cereal_loss_pct, lpi_overall,
     rural_electricity_access_pct, fertiliser_efficiency,
-    food_price_inflation_pct) were all n.s. in Phase D;
+    food_price_inflation_pct) were all n.s. in Step 7;
     robustness specs confirm this is not sample-specific
   - Spec 4 (no Cook outliers) and Spec 5 (no ISO outliers):
     if results hold here, findings are not driven by extreme cases
