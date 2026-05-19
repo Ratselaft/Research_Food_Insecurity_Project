@@ -851,7 +851,7 @@ Zins, A., & Weill, L. (2016). The determinants of financial inclusion in Africa.
 
 ## A.1 LDA Coherence Curve
 
-The LDA coherence curve, produced by `src/phase_a3_lda_topic_modelling.py`, is stored at `outputs/figures/lda_coherence_curve.png`. The curve plots c_v coherence against K (number of topics) for K = 3 to K = 12. The highest coherence achieved is approximately 0.38 at K = 8, which is below the pre-registered 0.60 threshold. The curve is relatively flat across K values, with no clear optimal elbow, confirming that the corpus size (N = 127) is insufficient for reliable LDA inference on this specialised technical vocabulary. This figure should be consulted alongside the NMF results to contextualise the decision to use NMF as the primary topic model.
+The LDA coherence curve, produced by `src/step3_find_topics_in_papers.py`, is stored at `outputs/figures/lda_coherence_curve.png`. The curve plots c_v coherence against K (number of topics) for K = 3 to K = 12. The highest coherence achieved is approximately 0.38 at K = 8, which is below the pre-registered 0.60 threshold. The curve is relatively flat across K values, with no clear optimal elbow, confirming that the corpus size (N = 127) is insufficient for reliable LDA inference on this specialised technical vocabulary. This figure should be consulted alongside the NMF results to contextualise the decision to use NMF as the primary topic model.
 
 ## A.2 NMF Topic Detail
 
@@ -891,9 +891,11 @@ Full robustness specification results are stored at `outputs/tables/robustness_s
 
 All code used in this analysis is stored in the `src/` directory of the research repository:
 
-- `src/phase_a3_lda_topic_modelling.py`: Corpus loading, LDA sweep, coherence scoring, NMF topic extraction, TF-IDF keyword ranking
-- `src/phase_a4_score_aligned_literature.py`: Paper alignment scoring, corpus validation, strict inclusion filtering
-- `src/phase_f_nlp_to_empirical_synthesis.py`: Variable assembly, regression models A through F, nested F-test, bootstrap CIs, robustness specifications, RF/XGB cross-validation
+- `src/step3_find_topics_in_papers.py`: Corpus loading, LDA sweep, coherence scoring, NMF topic extraction, TF-IDF keyword ranking
+- `src/step4_score_and_filter_papers.py`: Paper alignment scoring, corpus validation, strict inclusion filtering
+- `src/step7_run_prediction_models.py`: Variable assembly, regression models A through F, bootstrap CIs, RF/XGB cross-validation
+- `src/step8_check_results_are_reliable.py`: Nested F-test, robustness specifications, VIF checks
+- `src/step9_write_the_findings_report.py`: Plain-text synthesis narrative
 
 Processed datasets are stored in `data/processed/`:
 - `phase_A_theme_variable_mapping.csv`: NMF topic-to-variable mapping

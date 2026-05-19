@@ -1,4 +1,4 @@
-# CLAUDE.md — Food Insecurity Research Pipeline
+# PIPELINE_GUIDE.md — Food Insecurity Research Pipeline
 
 ## What this project does
 

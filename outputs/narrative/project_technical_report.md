@@ -197,7 +197,7 @@ These criteria were established so that "I'm convinced" could be based on eviden
 
 ### 6.1 The Implementation
 
-Implementing the FAO FBS dependent variable required modifying Step 1 of `src/phase_d_ols_randomforest_xgboost.py`. The existing code downloaded cereal production from the World Bank API and divided by population. The new code attempts three strategies in sequence, using the first that succeeds:
+Implementing the FAO FBS dependent variable required modifying Step 1 of `src/step7_run_prediction_models.py`. The existing code downloaded cereal production from the World Bank API and divided by population. The new code attempts three strategies in sequence, using the first that succeeds:
 
 **Strategy 1 — FAOSTAT REST API:** The API at `https://www.fao.org/faostat/api/v1/en/data/FBS` (and its mirror at `fenixservices.fao.org`) was tried first. Both were unreachable — one timed out, the other returned HTTP 404. FAOSTAT migrated its API infrastructure in 2023, and the new endpoint was not responding at the time of implementation.
 
@@ -439,15 +439,15 @@ The dissertation should report this pipeline's results across three sections:
 
 | Change | File Modified | What Changed | Why |
 |---|---|---|---|
-| 1 | phase_a4_score_aligned_literature.py | AVAILABILITY_TERMS list expanded from 28 to 54 entries | Missing crop-specific production and yield terms were misclassifying supply-side papers as moderate |
-| 2 | phase_a4_score_aligned_literature.py | Strict filter changed from theme-based fallback to explicit availability term gate | Access-side papers were accumulating thematic scores without any supply-side signal |
-| 3 | phase_f_nlp_to_empirical_synthesis.py | Added scipy nested F-test and partial R² calculation | No formal statistical test of NLP value-added existed |
-| 4 | phase_c_clean_and_merge_master_dataset.py | LPI retained for robustness only; Trade % GDP (NE.TRD.GNFS.ZS) added as primary logistics proxy | LPI covers only 90/174 countries (48% missing), collapsing Model F to N≈78 |
-| 5 | phase_d_ols_randomforest_xgboost.py | KNN imputation (k=5, ≤20% threshold) added before each model fit | Variables with 4–16 missing countries were dropping countries unnecessarily |
-| 6 | phase_d_ols_randomforest_xgboost.py | Step 1 DV download replaced with three-attempt FAO FBS strategy | Production-based DV measures what was grown, not what is available; FBS was the proposal-specified DV |
-| 7 | phase_d_ols_randomforest_xgboost.py | Added io, zipfile, pycountry imports; M49→ISO3 conversion function | FAO ZIP uses M49 numeric codes, not ISO3; pycountry converts them |
-| 8 | phase_d_ols_randomforest_xgboost.py | Removed 5 kg/capita minimum filter for FBS DV | Import-dependent countries have real FBS food supply and should not be excluded |
-| 9 | phase_f_nlp_to_empirical_synthesis.py | Narrative generation made conditional on F-test significance | Hardcoded "not significant" language was correct for null result but wrong after FBS DV made F-test significant |
+| 1 | step4_score_and_filter_papers.py | AVAILABILITY_TERMS list expanded from 28 to 54 entries | Missing crop-specific production and yield terms were misclassifying supply-side papers as moderate |
+| 2 | step4_score_and_filter_papers.py | Strict filter changed from theme-based fallback to explicit availability term gate | Access-side papers were accumulating thematic scores without any supply-side signal |
+| 3 | step9_write_the_findings_report.py | Added scipy nested F-test and partial R² calculation | No formal statistical test of NLP value-added existed |
+| 4 | step6_clean_and_combine_data.py | LPI retained for robustness only; Trade % GDP (NE.TRD.GNFS.ZS) added as primary logistics proxy | LPI covers only 90/174 countries (48% missing), collapsing Model F to N≈78 |
+| 5 | step7_run_prediction_models.py | KNN imputation (k=5, ≤20% threshold) added before each model fit | Variables with 4–16 missing countries were dropping countries unnecessarily |
+| 6 | step7_run_prediction_models.py | Step 1 DV download replaced with three-attempt FAO FBS strategy | Production-based DV measures what was grown, not what is available; FBS was the proposal-specified DV |
+| 7 | step7_run_prediction_models.py | Added io, zipfile, pycountry imports; M49→ISO3 conversion function | FAO ZIP uses M49 numeric codes, not ISO3; pycountry converts them |
+| 8 | step7_run_prediction_models.py | Removed 5 kg/capita minimum filter for FBS DV | Import-dependent countries have real FBS food supply and should not be excluded |
+| 9 | step9_write_the_findings_report.py | Narrative generation made conditional on F-test significance | Hardcoded "not significant" language was correct for null result but wrong after FBS DV made F-test significant |
 
 ---
 
