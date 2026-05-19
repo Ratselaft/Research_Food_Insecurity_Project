@@ -19,7 +19,7 @@
 #
 #   Source 3 — Manually downloaded PDFs
 #     Any PDF papers I download manually are handled by the
-#     next script: phase_a2_extract_text_from_pdfs.py
+#     next script: step2_read_text_from_pdfs.py
 #
 # Why all three?
 #   OpenAlex alone misses many journals and conference papers.
@@ -297,7 +297,7 @@ def search_openalex(query, max_results):
 # ============================================================
 
 print("=" * 60)
-print("PHASE A1 — Building the academic paper corpus")
+print("STEP 1 — Building the academic paper corpus")
 print("=" * 60)
 print()
 print("SOURCE 1: OpenAlex API searches")
@@ -653,7 +653,9 @@ else:
     print("  Export from WoS (SHU library) and save to that path.")
 
 # I report how many external papers I found
-total_external = sum(len(df) for df in external_records)
+total_external = 0
+for df in external_records:
+    total_external = total_external + len(df)
 print("\nTotal papers from SHU library databases:", total_external)
 
 
@@ -775,7 +777,7 @@ if len(papers_with_abstract) > 0:
 
 print()
 print("=" * 60)
-print("PHASE A1 COMPLETE")
+print("STEP 1 COMPLETE")
 print()
 print("To get MORE papers (recommended):")
 print("  1. Log in to Scopus at SHU library portal")
@@ -786,5 +788,5 @@ print("     Export as CSV → save to: data/raw/scopus_export.csv")
 print("  2. Log in to Web of Science at SHU library portal")
 print("     Export as Tab-delimited → save to: data/raw/wos_export.txt")
 print("  3. Download any relevant PDF papers and put them in: data/raw/pdfs/")
-print("     Then run: phase_a2_extract_text_from_pdfs.py")
+print("     Then run: step2_read_text_from_pdfs.py")
 print("=" * 60)

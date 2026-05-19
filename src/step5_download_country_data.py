@@ -1,9 +1,9 @@
 # ============================================================
-# I'm downloading ALL the datasets I need for Phase B
+# I'm downloading ALL the datasets I need for Step 5
 # ============================================================
 #
 # What I'm doing here:
-#   Phase A found 9 topics in my papers. Each topic maps to
+#   Step 3 found topics in my papers. Each topic maps to
 #   a real, measurable country-level number. This script
 #   downloads all those numbers from free public databases.
 #
@@ -47,7 +47,7 @@ os.makedirs("data/raw", exist_ok=True)
 os.makedirs("data/processed", exist_ok=True)
 
 # I let the user know I'm starting
-print("Starting Phase B — downloading all datasets...")
+print("Starting Step 5 — downloading all datasets...")
 print("=" * 60)
 
 
@@ -328,7 +328,7 @@ else:
 # ============================================================
 # Dataset 3: Global Findex 2021 — DISAGGREGATED financial access
 # ============================================================
-# This is the most important improvement in Phase B.
+# This is the most important improvement in this step.
 #
 # Previously I only downloaded the NATIONAL average account ownership.
 # But my dissertation argument is about whether financial access reaches
@@ -429,7 +429,7 @@ try:
     flw_api = "https://fenixservices.fao.org/faostat/api/v1/en/data/FLWSTAT"
 
     # I request ALL years so I have more coverage
-    # I will filter to recent years in Phase C
+    # I will filter to recent years in Step 6
     params = {}
     params["output_type"] = "csv"
     params["area_cs"]     = "ISO3"
@@ -647,7 +647,7 @@ else:
     print()
     print("  Creating a placeholder file so the pipeline does not crash...")
 
-    # I create a placeholder so Phase C does not crash when looking for this file
+    # I create a placeholder so Step 6 does not crash when looking for this file
     wgi_placeholder_cols = [
         "country_code",
         "wgi_control_of_corruption",
@@ -668,7 +668,7 @@ else:
 # ============================================================
 
 print("\n" + "=" * 60)
-print("PHASE B COMPLETE — File Summary")
+print("STEP 5 COMPLETE — File Summary")
 print("=" * 60)
 
 # I check each expected file and report its status
@@ -706,4 +706,4 @@ for filepath in files_to_check:
 
 print()
 print("Files marked FILL need manual download — see instructions printed above.")
-print("Next step: Phase C — clean and merge all files into one master dataset.")
+print("Next step: Step 6 — clean and merge all files into one master dataset.")

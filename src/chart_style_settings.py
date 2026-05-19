@@ -10,4 +10,3 @@ def use_project_matplotlib_config():
 
     os.makedirs(config_folder, exist_ok=True)
     os.environ.setdefault("MPLCONFIGDIR", config_folder)
-

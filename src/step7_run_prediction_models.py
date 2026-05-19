@@ -73,7 +73,7 @@ import zipfile
 # I need pycountry to convert FAO M49 codes to ISO3
 import pycountry
 
-from matplotlib_setup import use_project_matplotlib_config
+from chart_style_settings import use_project_matplotlib_config
 
 use_project_matplotlib_config()
 # I need matplotlib to draw charts
@@ -118,7 +118,7 @@ RANDOM_SEED = 42
 # to severe overfitting and negative out-of-sample R².
 MIN_ML_N = 80
 
-print("Starting Phase D — modelling...")
+print("Starting Step 7 — modelling...")
 print("=" * 60)
 
 
@@ -216,11 +216,20 @@ if dv_df is None:
                 content = b"".join(chunks)
                 zf = zipfile.ZipFile(io.BytesIO(content))
 
-                # The main data CSV
-                data_csv = next(n for n in zf.namelist()
-                                if n.endswith(".csv") and "AreaCode" not in n)
+                # The main data CSV — I find it with a plain for loop
+                data_csv = None
+                for name in zf.namelist():
+                    if name.endswith(".csv") and "AreaCode" not in name:
+                        data_csv = name
+                        break
+
                 fbs_raw = pd.read_csv(zf.open(data_csv), encoding="latin-1")
-                fbs_raw.columns = [c.strip() for c in fbs_raw.columns]
+
+                # I strip any extra whitespace from each column name
+                clean_col_names = []
+                for col_name in fbs_raw.columns:
+                    clean_col_names.append(col_name.strip())
+                fbs_raw.columns = clean_col_names
 
                 # Filter to cereals food supply for the target year
                 mask = (
@@ -270,8 +279,11 @@ if dv_df is None:
             timeout=30,
         )
         meta_json = meta_resp.json()
-        REAL_ISO3 = {c["id"] for c in meta_json[1]
-                     if c.get("region", {}).get("id", "") != "NA"}
+        # I build the set of real country ISO3 codes without a set comprehension
+        REAL_ISO3 = set()
+        for c in meta_json[1]:
+            if c.get("region", {}).get("id", "") != "NA":
+                REAL_ISO3.add(c["id"])
     except Exception:
         REAL_ISO3 = None
 
@@ -282,12 +294,13 @@ if dv_df is None:
             timeout=30,
         )
         prod_data = prod_resp.json()[1]
-        prod = {
-            e["countryiso3code"]: e["value"]
-            for e in prod_data
-            if e.get("value") and e.get("countryiso3code")
-            and (REAL_ISO3 is None or e["countryiso3code"] in REAL_ISO3)
-        }
+        # I build the production dictionary without a dict comprehension
+        prod = {}
+        for e in prod_data:
+            if e.get("value") and e.get("countryiso3code"):
+                iso3_code = e["countryiso3code"]
+                if REAL_ISO3 is None or iso3_code in REAL_ISO3:
+                    prod[iso3_code] = e["value"]
     except Exception as ex:
         print(f"  WB production download failed: {ex}")
         prod = {}
@@ -299,11 +312,11 @@ if dv_df is None:
             timeout=30,
         )
         pop_data = pop_resp.json()[1]
-        pop = {
-            e["countryiso3code"]: e["value"]
-            for e in pop_data
-            if e.get("value") and e.get("countryiso3code")
-        }
+        # I build the population dictionary without a dict comprehension
+        pop = {}
+        for e in pop_data:
+            if e.get("value") and e.get("countryiso3code"):
+                pop[e["countryiso3code"]] = e["value"]
     except Exception as ex:
         print(f"  WB population download failed: {ex}")
         pop = {}
@@ -482,7 +495,7 @@ def prepare_data(df, predictor_cols, outcome_col):
     needed = [outcome_col] + predictor_cols
 
     # I only keep columns that actually exist in the table
-    # (some variables may not be in the master if Phase B couldn't download them)
+    # (some variables may not be in the master if Step 5 couldn't download them)
     needed_existing = []
     for col in needed:
         if col in working.columns:
@@ -563,14 +576,16 @@ def run_ols(X, y, model_name, predictor_list):
 def check_vif(X):
     """Print VIF for each predictor. VIF > 10 signals severe multicollinearity."""
     try:
-        vif_vals = [
-            variance_inflation_factor(X.values.astype(float), i)
-            for i in range(X.shape[1])
-        ]
+        vif_vals = []
+        for i in range(X.shape[1]):
+            vif_vals.append(variance_inflation_factor(X.values.astype(float), i))
         vif_df = pd.DataFrame({"Variable": X.columns, "VIF": vif_vals})
         high = vif_df[vif_df["VIF"] > 10]
         if len(high) > 0:
-            pairs = {row["Variable"]: round(row["VIF"], 1) for _, row in high.iterrows()}
+            # I build the pairs dictionary without a dict comprehension
+            pairs = {}
+            for _, row in high.iterrows():
+                pairs[row["Variable"]] = round(row["VIF"], 1)
             print("  Multicollinearity warning — VIF > 10:", pairs)
         else:
             max_vif = round(vif_df["VIF"].max(), 1)
@@ -680,11 +695,14 @@ for model_name in MODELS:
     X, y, used_predictors = prepare_data(master, predictor_cols, DV)
 
     # I report which predictors are actually available
-    missing_vars = [c for c in predictor_cols if c not in X.columns]
+    missing_vars = []
+    for c in predictor_cols:
+        if c not in X.columns:
+            missing_vars.append(c)
     if missing_vars:
         print("  NOTE: These variables were not available and are excluded:")
         for v in missing_vars:
-            print("        -", v, "(download or merge failed — check Phase B / Phase C)")
+            print("        -", v, "(download or merge failed — check Step 5 / Step 6)")
 
     print("  Predictors being used:", used_predictors)
     print("  Countries with complete data:", len(X))
@@ -772,10 +790,12 @@ if len(X_a_star) >= 30:
     make_shap_plot(rf_a_star, X_a_star, "Model A★ — NLP sample")
 
     # Get Model F R² from the results list (last Model F entry)
-    r2_f_live = next(
-        (r["OLS R²"] for r in reversed(results) if "Model F" in r["Model"]),
-        None
-    )
+    r2_f_live = None
+    for r in reversed(results):
+        if "Model F" in r["Model"]:
+            r2_f_live = r["OLS R²"]
+            break
+
     if r2_f_live is not None:
         incr_r2 = round(r2_f_live - ols_a_star.rsquared, 3)
         print(f"\n  HONEST COMPARISON (same N={len(X_a_star)} sample):")
@@ -785,6 +805,17 @@ if len(X_a_star) >= 30:
     else:
         print("  (Could not locate Model F R² for honest comparison)")
 
+    # I decide the rounded CV R² values using if/else instead of ternary
+    if not np.isnan(rf_cv_a_star):
+        rounded_rf_cv = round(rf_cv_a_star, 3)
+    else:
+        rounded_rf_cv = np.nan
+
+    if not np.isnan(xgb_cv_a_star):
+        rounded_xgb_cv = round(xgb_cv_a_star, 3)
+    else:
+        rounded_xgb_cv = np.nan
+
     results.append({
         "Model":            "Model A★ — NLP sample",
         "N (countries)":    len(X_a_star),
@@ -792,8 +823,8 @@ if len(X_a_star) >= 30:
         "OLS R²":           round(ols_a_star.rsquared, 3),
         "OLS Adj R²":       round(ols_a_star.rsquared_adj, 3),
         "OLS F-stat p":     round(ols_a_star.f_pvalue, 4),
-        "RF 5-fold CV R²":  round(rf_cv_a_star, 3) if not np.isnan(rf_cv_a_star) else np.nan,
-        "XGB 5-fold CV R²": round(xgb_cv_a_star, 3) if not np.isnan(xgb_cv_a_star) else np.nan,
+        "RF 5-fold CV R²":  rounded_rf_cv,
+        "XGB 5-fold CV R²": rounded_xgb_cv,
     })
 else:
     print("  Skipped Model A★ — too few countries with complete data")
@@ -831,7 +862,12 @@ def bootstrap_coefs(df, predictor_cols, outcome_col, n_iter=N_BOOT):
     X_all, y_all, used = prepare_data(df, predictor_cols, outcome_col)
     if len(X_all) < 30:
         return pd.DataFrame()
-    store = {c: [] for c in used}
+
+    # I build the store dictionary without a dict comprehension
+    store = {}
+    for c in used:
+        store[c] = []
+
     rng = np.random.default_rng(RANDOM_SEED)
     for _ in range(n_iter):
         idx = rng.choice(len(X_all), len(X_all), replace=True)
@@ -839,12 +875,15 @@ def bootstrap_coefs(df, predictor_cols, outcome_col, n_iter=N_BOOT):
         try:
             m = sm.OLS(yb, sm.add_constant(Xb)).fit()
             for c in used:
+                # I check if this coefficient exists in the model results
                 if c in m.params:
                     store[c].append(m.params[c])
         except Exception:
             pass
+
     rows = []
-    for c, vals in store.items():
+    for c in store:
+        vals = store[c]
         if len(vals) >= 50:
             rows.append({
                 "variable":    c,
@@ -875,7 +914,11 @@ print(f"  {'Variable':<38} {'Mean':>8} {'Lower 95%':>10} {'Upper 95%':>10}")
 print("  " + "-" * 68)
 for _, row in boot_f.iterrows():
     if row["variable"] in nlp_vars:
-        cross_zero = "(CI crosses zero)" if row["ci_lower_95"] * row["ci_upper_95"] < 0 else "(CI excludes zero ✓)"
+        # I decide the CI note using if/else instead of a ternary
+        if row["ci_lower_95"] * row["ci_upper_95"] < 0:
+            cross_zero = "(CI crosses zero)"
+        else:
+            cross_zero = "(CI excludes zero ✓)"
         print(f"  {row['variable']:<38} {row['boot_mean']:>8.4f} "
               f"{row['ci_lower_95']:>10.4f} {row['ci_upper_95']:>10.4f}  {cross_zero}")
 
@@ -905,11 +948,12 @@ bars2 = ax.bar(x,          rf_heights,           width, label="Random Forest CV 
 bars3 = ax.bar(x + width,  xgb_heights,          width, label="XGBoost CV R²",       color="#70AD47")
 
 # I add value labels on top of every bar; NaN models get an "N/A" note
-for bar_idx, bar_group in enumerate([(bars1, results_df["OLS R²"]),
-                                      (bars2, results_df["RF 5-fold CV R²"]),
-                                      (bars3, results_df["XGB 5-fold CV R²"])]):
+for bar_group in [(bars1, results_df["OLS R²"]),
+                  (bars2, results_df["RF 5-fold CV R²"]),
+                  (bars3, results_df["XGB 5-fold CV R²"])]:
     bars, values = bar_group
-    for i, bar in enumerate(bars):
+    for i in range(len(bars)):
+        bar = bars[i]
         val = values.iloc[i]
         h   = bar.get_height()
         if pd.isna(val):
@@ -1037,7 +1081,8 @@ if len(X_f_chart) >= 30:
     bars  = ax.barh(y_pos, coefs_sorted.values, color=colours, alpha=0.85)
 
     # Thicker border for NLP-discovered variables
-    for i, var in enumerate(coefs_sorted.index):
+    for i in range(len(coefs_sorted)):
+        var = coefs_sorted.index[i]
         if var in nlp_highlight:
             bars[i].set_edgecolor("#1565C0")
             bars[i].set_linewidth(2)
@@ -1067,10 +1112,10 @@ else:
 
 
 print("\n" + "=" * 60)
-print("PHASE D COMPLETE")
+print("STEP 7 COMPLETE")
 print("Outputs saved:")
 print("  outputs/tables/   — OLS tables (one per model) + comparison CSV")
 print("  outputs/figures/  — SHAP charts + R² progression + Model D coefficients")
 print("  Model F tests NLP-discovered themes vs baseline — check its R² vs Model A")
-print("Next step: Phase E — outlier checks and robustness specifications")
+print("Next step: Step 8 — outlier checks and robustness specifications")
 print("=" * 60)

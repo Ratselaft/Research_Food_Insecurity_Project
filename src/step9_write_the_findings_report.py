@@ -1,5 +1,5 @@
 # ============================================================
-# Phase F — Availability-focused NLP-to-empirical synthesis
+# Step 9 — Availability-focused NLP-to-empirical synthesis
 # ============================================================
 #
 # This script summarises the corrected dissertation pipeline:
@@ -164,7 +164,11 @@ if os.path.exists(BOOT_FILE):
         lo = float(row["ci_lower_95"].iloc[0])
         hi = float(row["ci_upper_95"].iloc[0])
         excludes = lo * hi > 0
-        status = "excludes zero" if excludes else "crosses zero"
+        # I build the status string with an if/else block instead of a ternary
+        if excludes:
+            status = "excludes zero"
+        else:
+            status = "crosses zero"
         if excludes:
             n_boot_sig += 1
         crosses.append(f"  - {variable}: 95% CI {status} [{lo:.3f}, {hi:.3f}]")
@@ -174,7 +178,12 @@ if os.path.exists(BOOT_FILE):
 _f_sig  = ftest["p_value"]
 _adj_a  = float(model_a_star["OLS Adj R²"])
 _adj_f  = float(model_f["OLS Adj R²"])
-_adj_dir = "increases" if _adj_f >= _adj_a else "decreases"
+
+# I build _adj_dir with a plain if/else block
+if _adj_f >= _adj_a:
+    _adj_dir = "increases"
+else:
+    _adj_dir = "decreases"
 
 if _f_sig < 0.05:
     _ftest_conclusion = (
@@ -185,12 +194,18 @@ if _f_sig < 0.05:
         f"  confirming that the NLP-discovered predictors add genuine explanatory power."
     )
 else:
+    # I build the final line of this branch without an f-string ternary
+    if _adj_f > _adj_a:
+        _extra_line = "suggesting the predictors contribute modestly."
+    else:
+        _extra_line = "confirming the extra predictors do not justify their degrees of freedom."
+
     _ftest_conclusion = (
         f"  The result is {sig_label(_f_sig)}: the NLP block adds "
         f"{ftest['partial_r2']:.1%} partial R2\n"
         f"  but this is not statistically distinguishable from noise at conventional thresholds.\n"
         f"  The adjusted R2 {_adj_dir} from {_adj_a:.3f} to {_adj_f:.3f},\n"
-        f"  {'suggesting the predictors contribute modestly.' if _adj_f > _adj_a else 'confirming the extra predictors do not justify their degrees of freedom.'}"
+        f"  {_extra_line}"
     )
 
 # ── Build conditional section 5 interpretation ───────────────────────────────
@@ -241,13 +256,13 @@ The dissertation should report this as:
     but cross-country data quality (especially for post-harvest loss and logistics)
     limits their measurable predictive contribution at country level"""
 
-narrative = f"""PHASE F SYNTHESIS — FOOD AVAILABILITY VERSION
+narrative = f"""STEP 9 SYNTHESIS — FOOD AVAILABILITY VERSION
 Generated: {datetime.date.today().isoformat()}
 
 1. Literature corpus alignment
 
 The strict NLP corpus now contains {n_strict} papers, meeting the target of at least 100 fully aligned papers.
-These are no longer broad food-security papers. Phase A4 now requires a food-security core plus an
+These are no longer broad food-security papers. Step 4 now requires a food-security core plus an
 availability-side signal such as food availability, cereal production, crop yield, post-harvest loss,
 storage, cold chain, food supply, logistics, or value-chain movement.
 
@@ -315,9 +330,9 @@ literature emphasises as drivers of cereal food availability.
 {_interpretation_body}
 """
 
-with open("outputs/narrative/phase_f_synthesis.txt", "w", encoding="utf-8") as fh:
+with open("outputs/narrative/step9_synthesis.txt", "w", encoding="utf-8") as fh:
     fh.write(narrative)
 
-print("Phase F availability synthesis saved:")
-print("  outputs/narrative/phase_f_synthesis.txt")
+print("Step 9 availability synthesis saved:")
+print("  outputs/narrative/step9_synthesis.txt")
 print("  outputs/tables/nlp_empirical_synthesis.csv")

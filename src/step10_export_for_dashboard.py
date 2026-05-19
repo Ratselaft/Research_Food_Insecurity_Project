@@ -1,5 +1,5 @@
 # ============================================================
-# Phase G — Export cleaned tables for the Power BI dashboard
+# Step 10 — Export cleaned tables for the Power BI dashboard
 # ============================================================
 #
 # The dissertation proposal specifies a 5-page Power BI dashboard.
@@ -22,7 +22,7 @@ import pandas as pd
 
 os.makedirs("outputs/powerbi", exist_ok=True)
 
-print("Phase G — Building Power BI data exports...")
+print("Step 10 — Building Power BI data exports...")
 print("=" * 60)
 
 
@@ -50,13 +50,19 @@ page1_models["Model Label"] = page1_models["Model"].str.replace(
     " — ", ": ", regex=False
 ).str.replace("—", "", regex=False).str.strip()
 
-# Significance column for F-stat
+
+# I define the significance function for the F-stat column
 def sig(p):
-    if pd.isna(p): return ""
-    if p < 0.01: return "***"
-    if p < 0.05: return "**"
-    if p < 0.10: return "*"
+    if pd.isna(p):
+        return ""
+    if p < 0.01:
+        return "***"
+    if p < 0.05:
+        return "**"
+    if p < 0.10:
+        return "*"
     return "n.s."
+
 
 page1_models["Overall F sig"] = page1_models["OLS F-stat p"].apply(sig)
 page1_models["Delta R² vs A*"] = np.nan
@@ -162,9 +168,19 @@ page3_synth = synth_raw[[
 page3_synth.columns = [
     "NLP Theme", "Model F Variable", "OLS Coefficient", "p-value", "Significance"
 ]
-page3_synth["Direction"] = page3_synth["OLS Coefficient"].apply(
-    lambda x: "Positive" if x > 0 else "Negative" if x < 0 else "—"
-)
+
+
+# I define a named function to replace the lambda that was here
+def get_direction(x):
+    if x > 0:
+        return "Positive"
+    elif x < 0:
+        return "Negative"
+    else:
+        return "—"
+
+
+page3_synth["Direction"] = page3_synth["OLS Coefficient"].apply(get_direction)
 page3_synth.to_csv("outputs/powerbi/page3_nlp_synthesis.csv", index=False)
 print("  Saved: page3_nlp_synthesis.csv")
 
@@ -211,11 +227,16 @@ f_stat   = (delta_r2 / q) / ((1 - r2_full) / df2)
 p_value  = float(1 - f_dist.cdf(f_stat, q, df2))
 partial  = delta_r2 / (1 - r2_restr)
 
+
 def sig_label(p):
-    if p < 0.01: return "***"
-    if p < 0.05: return "**"
-    if p < 0.10: return "*"
+    if p < 0.01:
+        return "***"
+    if p < 0.05:
+        return "**"
+    if p < 0.10:
+        return "*"
     return "n.s."
+
 
 ftest_df = pd.DataFrame([{
     "Test":          "Nested F-test: Model A* vs Model F",
@@ -256,7 +277,13 @@ MAP_COLS = [
     "fertiliser_efficiency",
     "rural_population_pct",
 ]
-existing_map = [c for c in MAP_COLS if c in master_dv.columns]
+
+# I build the list of existing map columns with an explicit for loop
+existing_map = []
+for c in MAP_COLS:
+    if c in master_dv.columns:
+        existing_map.append(c)
+
 page4 = master_dv[existing_map].dropna(subset=["cereal_availability_kg_pc"]).copy()
 
 # Human-readable column names
@@ -313,7 +340,13 @@ for pred in KEY_PREDICTORS:
     if coef_col in rob_raw.columns:
         page5_cols += [coef_col, sig_col]
 
-page5_rob = rob_raw[[c for c in page5_cols if c in rob_raw.columns]].copy()
+# I build the final column list with an explicit for loop
+page5_cols_existing = []
+for c in page5_cols:
+    if c in rob_raw.columns:
+        page5_cols_existing.append(c)
+
+page5_rob = rob_raw[page5_cols_existing].copy()
 
 # Rename for readability
 rename_map = {}
@@ -349,7 +382,14 @@ for col in LOG_COLS_E:
         master_e[col] = np.log1p(master_e[col].clip(lower=0))
 
 needed = MODEL_A_VARS + [DV, "country_name", "country_code"]
-working_e = master_e[[c for c in needed if c in master_e.columns]].dropna().reset_index(drop=True)
+
+# I build the needed columns list with an explicit for loop
+needed_existing = []
+for c in needed:
+    if c in master_e.columns:
+        needed_existing.append(c)
+
+working_e = master_e[needed_existing].dropna().reset_index(drop=True)
 X_e = working_e[MODEL_A_VARS]
 y_e = working_e[DV]
 fit_e = sm.OLS(y_e, sm.add_constant(X_e)).fit()
@@ -376,7 +416,14 @@ if os.path.exists("outputs/tables/robustness_model_f.csv"):
         for suffix in ["_coef", "_sig"]:
             if pred + suffix in rob_f_raw.columns:
                 rob_f_cols.append(pred + suffix)
-    page5_f = rob_f_raw[[c for c in rob_f_cols if c in rob_f_raw.columns]].copy()
+
+    # I build the existing columns list with an explicit for loop
+    rob_f_cols_existing = []
+    for c in rob_f_cols:
+        if c in rob_f_raw.columns:
+            rob_f_cols_existing.append(c)
+
+    page5_f = rob_f_raw[rob_f_cols_existing].copy()
     page5_f = page5_f.rename(columns={
         "rural_electricity_access_pct_coef": "Rural Electricity Coef",
         "rural_electricity_access_pct_sig":  "Rural Electricity Sig",
@@ -393,7 +440,7 @@ if os.path.exists("outputs/tables/robustness_model_f.csv"):
 # Summary
 # ============================================================
 print("\n" + "=" * 60)
-print("PHASE G COMPLETE — Power BI data exports")
+print("STEP 10 COMPLETE — Power BI data exports")
 print("=" * 60)
 print("""
 All files saved to outputs/powerbi/:
@@ -404,7 +451,7 @@ PAGE 1 — Overview
 
 PAGE 2 — NLP Findings
   page2_nmf_topics.csv          7 NMF topics with keywords and dominant paper count
-  page2_theme_variable_map.csv  NLP theme → proxy variable → data source
+  page2_theme_variable_map.csv  NLP theme -> proxy variable -> data source
   page2_tfidf_keywords.csv      Top 30 TF-IDF keywords (for word cloud visual)
 
 PAGE 3 — Empirical Results

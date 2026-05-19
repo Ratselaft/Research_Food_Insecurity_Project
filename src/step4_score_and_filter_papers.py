@@ -3,7 +3,7 @@
 # ============================================================
 #
 # What I'm doing here:
-#   Phase A1 gives me a large corpus from OpenAlex and Scopus.
+#   Step 1 gives me a large corpus from OpenAlex and Scopus.
 #   Not every paper in that corpus is equally useful for the
 #   dissertation. This script scores each paper against the
 #   project themes:
@@ -446,7 +446,7 @@ def main():
     os.makedirs("data/processed", exist_ok=True)
     os.makedirs("outputs/tables", exist_ok=True)
 
-    print("Starting Phase A4 - scoring literature alignment...")
+    print("Starting Step 4 - scoring literature alignment...")
     print("=" * 60)
 
     corpus = pd.read_csv(CORPUS_FILE)
@@ -496,7 +496,7 @@ def main():
     print("Saved strict shortlist:", STRICT_FILE)
     print("Saved summary:", SUMMARY_FILE)
     print("=" * 60)
-    print("PHASE A4 COMPLETE")
+    print("STEP 4 COMPLETE")
 
 
 if __name__ == "__main__":
