@@ -1,11 +1,11 @@
 # From Literature to Evidence: An NLP-Driven Predictive Analysis of Food Insecurity Factors, with a Focus on Post-Harvest Loss and Financial Access in Cross-Country Cereal Food Availability
 
 **Student:** Odekunle Jibola Johnson
-**Programme:** MSc [Data Science / Food Security / Applied Research]
+**Programme:** MSc Data Science and Artificial Intelligence
 **Institution:** Sheffield Hallam University
 **Supervisor:** [Supervisor Name]
 **Submission Date:** May 2026
-**Word Count:** approximately 20,000 words (body text)
+**Word Count:** 18,854 words (body text)
 
 ---
 
