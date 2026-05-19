@@ -1,11 +1,11 @@
 # ============================================================
-# download_missing_data.py
+# fill_missing_country_data.py
 # ============================================================
-# This script fills in the two datasets that Phase B could not
+# This script fills in the two datasets that Step 5 could not
 # download automatically:
 #
 #   1. World Bank WGI — Governance Indicators
-#      (the standard Phase B API call returned nothing because
+#      (the standard Step 5 API call returned nothing because
 #       the WGI lives in a separate World Bank database; this
 #       script uses the wbgapi library which handles that correctly)
 #
@@ -14,8 +14,8 @@
 #       tries the separate FAO FLW Platform API instead, then
 #       falls back to a World Bank post-harvest loss proxy)
 #
-# Run this AFTER phase_b_download_country_datasets.py has run.
-# Run phase_c_clean_and_merge_master_dataset.py AFTER this.
+# Run this AFTER step5_download_country_data.py has run.
+# Run step6_clean_and_combine_data.py AFTER this.
 # ============================================================
 
 import os
@@ -27,7 +27,7 @@ import requests
 os.makedirs("data/raw", exist_ok=True)
 
 print("=" * 60)
-print("Downloading missing Phase B datasets")
+print("Downloading missing Step 5 datasets")
 print("=" * 60)
 
 
@@ -35,7 +35,7 @@ print("=" * 60)
 # Part 1: WGI Governance Indicators via wbgapi
 # ============================================================
 # wbgapi uses World Bank database 3 (WGI) directly, which the
-# standard requests-based API call in Phase B could not reach.
+# standard requests-based API call in Step 5 could not reach.
 
 print("\n[1/2] World Bank WGI — Governance Indicators (via wbgapi)...")
 
@@ -109,7 +109,7 @@ except Exception as e:
 # ============================================================
 # Part 2: FAO Food Loss and Waste data
 # ============================================================
-# The FAOSTAT fenixservices server that Phase B hit is returning
+# The FAOSTAT fenixservices server that Step 5 hit is returning
 # 521 errors. The FAO FLW Platform has a separate API endpoint.
 # If that also fails, we construct a country-level proxy from
 # USDA/World Bank post-harvest loss research estimates.
@@ -300,4 +300,4 @@ for fname, label in [
         print(f"  MISS  {label}: not saved")
 
 print()
-print("Next step: python src/phase_c_clean_and_merge_master_dataset.py")
+print("Next step: python src/step6_clean_and_combine_data.py")

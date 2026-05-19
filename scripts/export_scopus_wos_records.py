@@ -441,7 +441,7 @@ def print_final_status():
     print_csv_status("Strictly aligned literature", STRICTLY_ALIGNED_FILE)
     print()
     print("When the files are ready, run:")
-    print("python3 src/phase_a1_fetch_papers_from_openalex.py")
+    print("python3 src/step1_collect_research_papers.py")
 
 
 def main():

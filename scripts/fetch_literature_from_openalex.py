@@ -3,7 +3,7 @@
 # ============================================================
 #
 # Purpose:
-#   Strengthen the Phase A literature corpus for the dissertation's
+#   Strengthen the Step 1 literature corpus for the dissertation's
 #   actual focus: food availability, not broad undernourishment.
 #
 # Source:
@@ -17,7 +17,7 @@
 #   3. Keep only papers whose title/abstract explicitly links to a
 #      project country.
 #   4. Save a raw supplemental CSV and append deduplicated records into
-#      data/raw/corpus_metadata.csv for Phase A4 scoring.
+#      data/raw/corpus_metadata.csv for Step 4 scoring.
 # ============================================================
 
 import os

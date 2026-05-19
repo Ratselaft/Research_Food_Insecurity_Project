@@ -1,5 +1,5 @@
 # ============================================================
-# scripts/mine_additional_data.py
+# scripts/mine_country_data_all_sources.py
 # ============================================================
 #
 # This script uses every available means to collect country-level
@@ -37,7 +37,7 @@
 #      African countries to produce a single combined PHL file.
 #      Output: data/raw/phl_combined.csv
 #
-# Run this AFTER scripts/download_new_data.py.
+# Run this AFTER scripts/fetch_additional_country_indicators.py.
 # ============================================================
 
 import io
@@ -715,8 +715,8 @@ if os.path.exists("data/raw/phl_combined.csv"):
 
 print()
 print("Next steps:")
-print("  1. python src/phase_c_clean_and_merge_master_dataset.py")
+print("  1. python src/step6_clean_and_combine_data.py")
 print("     Use phl_combined.csv instead of fao_flw_losses.csv")
-print("  2. python src/phase_d_ols_randomforest_xgboost.py")
+print("  2. python src/step7_run_prediction_models.py")
 print("     Add Model F with: lpi_overall, poverty_headcount_pct_215,")
 print("     aphlis_cereal_loss_pct, digital_finance_proxy, female_agri_employment_pct")

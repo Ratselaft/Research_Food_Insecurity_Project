@@ -1,14 +1,14 @@
 # ============================================================
-# scripts/download_new_data.py
+# scripts/fetch_additional_country_indicators.py
 # ============================================================
 #
 # What I'm downloading here:
 #   Four new datasets that improve the empirical analysis and
-#   properly test the NLP-discovered themes from Phase A3.
+#   properly test the NLP-discovered themes from Step 3.
 #
 #   IMPORTANT NOTE — no download needed for female_agri_employment_pct:
 #   That variable is ALREADY in data/raw/worldbank_wdi_2021.csv
-#   with 235 countries. You just need to include it in Phase D.
+#   with 235 countries. You just need to include it in Step 7.
 #
 #   1. Logistics Performance Index (LPI) — World Bank
 #      The value_chain_market_access NLP theme has 22.7% of paper
@@ -41,7 +41,7 @@
 #      context where the literature actually discusses it.
 #      Output: data/raw/mobile_financial_access.csv
 #
-# Run this script before re-running phase_c and phase_d.
+# Run this script before re-running step6 and step7.
 # ============================================================
 
 import io
@@ -132,7 +132,7 @@ print("=" * 60)
 print()
 print("NOTE: female_agri_employment_pct is ALREADY in your existing")
 print("  data/raw/worldbank_wdi_2021.csv with 235 countries.")
-print("  No download needed — include it in Phase D directly.")
+print("  No download needed — include it in Step 7 directly.")
 
 
 # ============================================================
@@ -596,7 +596,7 @@ if not aphlis_ok:
 #   Attempt 3 — World Bank: internet users percentage (IT.NET.USER.ZS)
 #     A third fallback capturing digital connectivity generally.
 #
-# We save all three columns so Phase D can choose the best one.
+# We save all three columns so Step 7 can choose the best one.
 
 print()
 print("[4/4] Mobile Financial Access...")
@@ -675,7 +675,7 @@ for fpath, label, flag in results:
 print()
 print("REMINDER — variable already in your existing data:")
 print("  female_agri_employment_pct is in data/raw/worldbank_wdi_2021.csv")
-print("  (235 countries) — no download needed, just add it to Phase D.")
+print("  (235 countries) — no download needed, just add it to Step 7.")
 
 print()
 if all_ok:
@@ -683,14 +683,14 @@ if all_ok:
 else:
     print("Some datasets saved. Next steps:")
 
-print("  1. Run: python src/phase_c_clean_and_merge_master_dataset.py")
+print("  1. Run: python src/step6_clean_and_combine_data.py")
 print("     to merge the new variables into the master dataset")
-print("  2. Then run: python src/phase_d_ols_randomforest_xgboost.py")
+print("  2. Then run: python src/step7_run_prediction_models.py")
 print("     to test the new variables in the empirical models")
 print()
-print("New variables to add to Model F in Phase D:")
+print("New variables to add to Model F in Step 7:")
 print("  lpi_overall              — tests value_chain_market_access NLP theme")
 print("  rural_poverty_headcount_pct — tests smallholder/poverty NLP theme")
 print("  aphlis_cereal_loss_pct   — replaces F-rated cereal_loss_pct")
 print("  digital_payments_pct     — tests financial_access in rural context")
-print("  female_agri_employment_pct — already downloaded, add to Phase D")
+print("  female_agri_employment_pct — already downloaded, add to Step 7")
