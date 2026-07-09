@@ -57,7 +57,24 @@ print("=" * 60)
 # I will reuse this function many times throughout this script.
 # It downloads one indicator for all countries and returns a table.
 
+WB_CACHE_DIR = "data/raw/wb_indicator_cache"
+os.makedirs(WB_CACHE_DIR, exist_ok=True)
+
+
 def download_world_bank(indicator_code, column_name, year=2021, source=None):
+    # I cache each indicator to disk the first time I fetch it, keyed by
+    # indicator + year + source. World Bank's API is a live, mutable source —
+    # it can silently fail on a given run, or revise a "fixed" year's values
+    # later — so re-fetching every run makes the whole pipeline's numbers
+    # non-reproducible run to run. Re-using the cached file keeps results
+    # stable until someone deliberately deletes the cache to refresh it.
+    cache_path = WB_CACHE_DIR + "/" + indicator_code + "_" + str(year) + "_src" + str(source) + ".csv"
+    if os.path.exists(cache_path):
+        try:
+            return pd.read_csv(cache_path)
+        except Exception:
+            pass  # cache file unreadable — fall through and re-fetch
+
     # I build the URL for this specific World Bank indicator
     url = "https://api.worldbank.org/v2/country/all/indicator/" + indicator_code
 
@@ -107,7 +124,9 @@ def download_world_bank(indicator_code, column_name, year=2021, source=None):
         if len(rows) == 0:
             return None
 
-        return pd.DataFrame(rows)
+        result_df = pd.DataFrame(rows)
+        result_df.to_csv(cache_path, index=False)
+        return result_df
 
     except Exception as e:
         print("    Error downloading", column_name, ":", e)
@@ -140,6 +159,16 @@ def download_faostat(dataset_code, filename, year=2021):
     params["year"]        = year     # I only want data for my chosen year
     params["output_type"] = "csv"    # I want a CSV file back
 
+    # If I already downloaded this file, I reuse it instead of hitting the
+    # live API again — FAOSTAT is a mutable source, so re-fetching on every
+    # run risks silently different numbers between runs (see download_world_bank).
+    save_path = "data/raw/" + filename
+    if os.path.exists(save_path):
+        try:
+            return pd.read_csv(save_path)
+        except Exception:
+            pass  # cached file unreadable — fall through and re-fetch
+
     # I tell the user what I'm fetching
     print("  Fetching", filename, "...")
 
@@ -148,8 +177,6 @@ def download_faostat(dataset_code, filename, year=2021):
         response = requests.get(url, params=params, timeout=60)
 
         if response.status_code == 200:
-            save_path = "data/raw/" + filename
-
             # I open the file for writing in binary mode
             with open(save_path, "wb") as f:
                 f.write(response.content)
@@ -280,49 +307,53 @@ WB_INDICATORS["EN.ATM.CO2E.KT"]    = "co2_emissions_kt"
 # CO2 emissions as a climate change proxy
 
 
-# I'll collect each indicator's table in this list
-wdi_tables = []
-
-# I go through each indicator one by one
-for code in WB_INDICATORS:
-    # I get the friendly column name for this indicator
-    name = WB_INDICATORS[code]
-
-    # I print progress
-    print("  Fetching", name, "...")
-
-    # I download this indicator for all countries
-    df = download_world_bank(code, name, year=2021)
-
-    # If I got real data back
-    if df is not None and len(df) > 0:
-        # I only keep the three columns I need: code, name, value
-        slim_df = df[["country_code", "country_name", name]].copy()
-        wdi_tables.append(slim_df)
-        print("    Got data for", len(slim_df), "countries")
-
-    # I pause briefly between requests to be polite to the server
-    time.sleep(0.4)
-
-# Now I merge all individual indicator tables into one big table
-if len(wdi_tables) > 0:
-    # I start with the first table as my base
-    wdi_merged = wdi_tables[0]
-
-    # I add each subsequent table by merging on country_code and country_name
-    for table in wdi_tables[1:]:
-        wdi_merged = wdi_merged.merge(
-            table,
-            on=["country_code", "country_name"],
-            how="outer"  # 'outer' means I keep all countries even if some data is missing
-        )
-
-    # I save the combined table
-    wdi_merged.to_csv("data/raw/worldbank_wdi_2021.csv", index=False)
-    print("  Saved worldbank_wdi_2021.csv —", len(wdi_merged), "countries,",
-          wdi_merged.shape[1], "columns")
+if os.path.exists("data/raw/worldbank_wdi_2021.csv"):
+    print("  worldbank_wdi_2021.csv already downloaded — reusing cached file.")
+    wdi_merged = pd.read_csv("data/raw/worldbank_wdi_2021.csv")
 else:
-    print("  Could not download any World Bank data")
+    # I'll collect each indicator's table in this list
+    wdi_tables = []
+
+    # I go through each indicator one by one
+    for code in WB_INDICATORS:
+        # I get the friendly column name for this indicator
+        name = WB_INDICATORS[code]
+
+        # I print progress
+        print("  Fetching", name, "...")
+
+        # I download this indicator for all countries
+        df = download_world_bank(code, name, year=2021)
+
+        # If I got real data back
+        if df is not None and len(df) > 0:
+            # I only keep the three columns I need: code, name, value
+            slim_df = df[["country_code", "country_name", name]].copy()
+            wdi_tables.append(slim_df)
+            print("    Got data for", len(slim_df), "countries")
+
+        # I pause briefly between requests to be polite to the server
+        time.sleep(0.4)
+
+    # Now I merge all individual indicator tables into one big table
+    if len(wdi_tables) > 0:
+        # I start with the first table as my base
+        wdi_merged = wdi_tables[0]
+
+        # I add each subsequent table by merging on country_code and country_name
+        for table in wdi_tables[1:]:
+            wdi_merged = wdi_merged.merge(
+                table,
+                on=["country_code", "country_name"],
+                how="outer"  # 'outer' means I keep all countries even if some data is missing
+            )
+
+        # I save the combined table
+        wdi_merged.to_csv("data/raw/worldbank_wdi_2021.csv", index=False)
+        print("  Saved worldbank_wdi_2021.csv —", len(wdi_merged), "countries,",
+              wdi_merged.shape[1], "columns")
+    else:
+        print("  Could not download any World Bank data")
 
 
 # ============================================================
@@ -374,42 +405,46 @@ FINDEX_INDICATORS["FX.TRN.FINM.ZS"]    = "borrowed_from_bank_pct"
 # A farmer receiving payment in cash cannot save easily or access credit
 FINDEX_INDICATORS["FX.TRN.AGRI.ZS"]    = "agri_payments_digital_pct"
 
-# I'll collect each Findex indicator table here
-findex_tables = []
-
-# I go through each Findex indicator one at a time
-for code in FINDEX_INDICATORS:
-    col_name = FINDEX_INDICATORS[code]
-    print("  Fetching", col_name, "...")
-
-    # I download this Findex indicator for all countries
-    df = download_world_bank(code, col_name, year=2021)
-
-    if df is not None and len(df) > 0:
-        # I only keep the country code and the value column
-        slim_df = df[["country_code", col_name]].copy()
-        findex_tables.append(slim_df)
-        print("    Got data for", len(slim_df), "countries")
-    else:
-        print("    No data for", col_name, "(may not be in WB API — check Findex website)")
-
-    time.sleep(0.5)
-
-# I merge all Findex tables into one
-if len(findex_tables) > 0:
-    findex_merged = findex_tables[0]
-    for table in findex_tables[1:]:
-        findex_merged = findex_merged.merge(table, on="country_code", how="outer")
-
-    # I save the combined Findex table
-    findex_merged.to_csv("data/raw/findex_2021.csv", index=False)
-    print("  Saved findex_2021.csv —", len(findex_merged), "countries,",
-          findex_merged.shape[1], "columns")
+if os.path.exists("data/raw/findex_2021.csv"):
+    print("  findex_2021.csv already downloaded — reusing cached file.")
+    findex_merged = pd.read_csv("data/raw/findex_2021.csv")
 else:
-    print("  Could not get any Findex data")
-    pd.DataFrame(columns=["country_code", "account_ownership_pct"]).to_csv(
-        "data/raw/findex_2021.csv", index=False
-    )
+    # I'll collect each Findex indicator table here
+    findex_tables = []
+
+    # I go through each Findex indicator one at a time
+    for code in FINDEX_INDICATORS:
+        col_name = FINDEX_INDICATORS[code]
+        print("  Fetching", col_name, "...")
+
+        # I download this Findex indicator for all countries
+        df = download_world_bank(code, col_name, year=2021)
+
+        if df is not None and len(df) > 0:
+            # I only keep the country code and the value column
+            slim_df = df[["country_code", col_name]].copy()
+            findex_tables.append(slim_df)
+            print("    Got data for", len(slim_df), "countries")
+        else:
+            print("    No data for", col_name, "(may not be in WB API — check Findex website)")
+
+        time.sleep(0.5)
+
+    # I merge all Findex tables into one
+    if len(findex_tables) > 0:
+        findex_merged = findex_tables[0]
+        for table in findex_tables[1:]:
+            findex_merged = findex_merged.merge(table, on="country_code", how="outer")
+
+        # I save the combined Findex table
+        findex_merged.to_csv("data/raw/findex_2021.csv", index=False)
+        print("  Saved findex_2021.csv —", len(findex_merged), "countries,",
+              findex_merged.shape[1], "columns")
+    else:
+        print("  Could not get any Findex data")
+        pd.DataFrame(columns=["country_code", "account_ownership_pct"]).to_csv(
+            "data/raw/findex_2021.csv", index=False
+        )
 
 time.sleep(1)
 
@@ -423,58 +458,65 @@ time.sleep(1)
 # This tells me WHERE in the value chain the losses happen.
 
 print("\n[4/6] Downloading FAO Food Loss and Waste data...")
-print("  Trying FAO FLW API...")
 
-try:
-    flw_api = "https://fenixservices.fao.org/faostat/api/v1/en/data/FLWSTAT"
+# I reuse a previously downloaded real file instead of hitting the live API
+# again (a placeholder is just a bare header row, so I use a size threshold
+# to tell it apart from an actual data file).
+if os.path.exists("data/raw/fao_flw_losses.csv") and os.path.getsize("data/raw/fao_flw_losses.csv") > 500:
+    print("  fao_flw_losses.csv already downloaded — reusing cached file.")
+else:
+    print("  Trying FAO FLW API...")
 
-    # I request ALL years so I have more coverage
-    # I will filter to recent years in Step 6
-    params = {}
-    params["output_type"] = "csv"
-    params["area_cs"]     = "ISO3"
+    try:
+        flw_api = "https://fenixservices.fao.org/faostat/api/v1/en/data/FLWSTAT"
 
-    response = requests.get(flw_api, params=params, timeout=60)
+        # I request ALL years so I have more coverage
+        # I will filter to recent years in Step 6
+        params = {}
+        params["output_type"] = "csv"
+        params["area_cs"]     = "ISO3"
 
-    if response.status_code == 200 and len(response.content) > 500:
-        # I save the raw file
-        with open("data/raw/fao_flw_losses.csv", "wb") as f:
-            f.write(response.content)
+        response = requests.get(flw_api, params=params, timeout=60)
 
-        # I check what columns are available — I want to find supply chain stage
-        try:
-            flw_df = pd.read_csv("data/raw/fao_flw_losses.csv")
-            print("  Saved fao_flw_losses.csv —", len(flw_df), "rows")
-            print("  Columns available:", list(flw_df.columns))
+        if response.status_code == 200 and len(response.content) > 500:
+            # I save the raw file
+            with open("data/raw/fao_flw_losses.csv", "wb") as f:
+                f.write(response.content)
 
-            # I check if there is a supply chain stage column
-            for col in flw_df.columns:
-                if "stage" in col.lower() or "chain" in col.lower() or "supply" in col.lower():
-                    print("  Value chain stage column found:", col)
-                    print("  Unique stages:", flw_df[col].unique()[:10])
+            # I check what columns are available — I want to find supply chain stage
+            try:
+                flw_df = pd.read_csv("data/raw/fao_flw_losses.csv")
+                print("  Saved fao_flw_losses.csv —", len(flw_df), "rows")
+                print("  Columns available:", list(flw_df.columns))
 
-        except Exception:
-            print("  File saved (could not preview columns)")
-    else:
-        # If the API didn't work, I create a placeholder and show download instructions
-        print("  FAO FLW API returned no data.")
-        print("  IMPORTANT — I need to download this manually:")
-        print("  1. Go to: https://www.fao.org/platform-food-loss-waste/flw-data/en/")
-        print("  2. Click 'Download data'")
-        print("  3. Select 'All regions', 'All commodities', 'All supply chain stages'")
-        print("  4. Save the file as: data/raw/fao_flw_losses.csv")
-        print("  Creating placeholder file so the rest of the pipeline does not crash...")
+                # I check if there is a supply chain stage column
+                for col in flw_df.columns:
+                    if "stage" in col.lower() or "chain" in col.lower() or "supply" in col.lower():
+                        print("  Value chain stage column found:", col)
+                        print("  Unique stages:", flw_df[col].unique()[:10])
 
+            except Exception:
+                print("  File saved (could not preview columns)")
+        else:
+            # If the API didn't work, I create a placeholder and show download instructions
+            print("  FAO FLW API returned no data.")
+            print("  IMPORTANT — I need to download this manually:")
+            print("  1. Go to: https://www.fao.org/platform-food-loss-waste/flw-data/en/")
+            print("  2. Click 'Download data'")
+            print("  3. Select 'All regions', 'All commodities', 'All supply chain stages'")
+            print("  4. Save the file as: data/raw/fao_flw_losses.csv")
+            print("  Creating placeholder file so the rest of the pipeline does not crash...")
+
+            placeholder_cols = ["country", "country_code", "commodity", "year",
+                                "loss_percentage", "supply_chain_stage"]
+            pd.DataFrame(columns=placeholder_cols).to_csv("data/raw/fao_flw_losses.csv", index=False)
+
+    except Exception as e:
+        print("  Error:", e)
         placeholder_cols = ["country", "country_code", "commodity", "year",
                             "loss_percentage", "supply_chain_stage"]
         pd.DataFrame(columns=placeholder_cols).to_csv("data/raw/fao_flw_losses.csv", index=False)
-
-except Exception as e:
-    print("  Error:", e)
-    placeholder_cols = ["country", "country_code", "commodity", "year",
-                        "loss_percentage", "supply_chain_stage"]
-    pd.DataFrame(columns=placeholder_cols).to_csv("data/raw/fao_flw_losses.csv", index=False)
-    print("  Placeholder created.")
+        print("  Placeholder created.")
 
 time.sleep(1)
 
@@ -494,60 +536,64 @@ time.sleep(1)
 
 print("\n[5/6] Downloading IMF Financial Access Survey data...")
 
-# I'll collect each IMF/banking indicator here
-imf_tables = []
-
-# Indicator 1: Bank branches per 100,000 adults
-print("  Fetching bank branches per 100,000 adults...")
-branches_df = download_world_bank("FB.CBK.BRCH.P5", "bank_branches_per_100k", 2021)
-if branches_df is not None and len(branches_df) > 0:
-    imf_tables.append(branches_df[["country_code", "bank_branches_per_100k"]])
-    print("    Got data for", len(branches_df), "countries")
-time.sleep(0.5)
-
-# Indicator 2: ATMs per 100,000 adults
-print("  Fetching ATMs per 100,000 adults...")
-atm_df = download_world_bank("FB.ATM.TOTL.P5", "atm_per_100k", 2021)
-if atm_df is not None and len(atm_df) > 0:
-    imf_tables.append(atm_df[["country_code", "atm_per_100k"]])
-    print("    Got data for", len(atm_df), "countries")
-time.sleep(0.5)
-
-# Indicator 3: Domestic credit to private sector (% of GDP)
-# This is my proxy for whether the financial system is ACTIVELY LENDING
-# to businesses and farms. A country where banks barely lend (low %)
-# means smallholder farmers cannot get the loans they need to invest
-# in better inputs, storage, or post-harvest handling.
-print("  Fetching domestic credit to private sector (% GDP)...")
-credit_df = download_world_bank("FS.AST.PRVT.GD.ZS", "private_credit_pct_gdp", 2021)
-if credit_df is not None and len(credit_df) > 0:
-    imf_tables.append(credit_df[["country_code", "private_credit_pct_gdp"]])
-    print("    Got data for", len(credit_df), "countries")
-time.sleep(0.5)
-
-# Indicator 4: Commercial bank deposits (% of GDP)
-# Where bank branches exist, do people actually USE them to save?
-print("  Fetching bank deposits as % of GDP...")
-deposits_df = download_world_bank("FD.AST.PRVT.GD.ZS", "bank_deposits_pct_gdp", 2021)
-if deposits_df is not None and len(deposits_df) > 0:
-    imf_tables.append(deposits_df[["country_code", "bank_deposits_pct_gdp"]])
-    print("    Got data for", len(deposits_df), "countries")
-time.sleep(0.5)
-
-# I merge all IMF/banking tables together
-if len(imf_tables) > 0:
-    imf_merged = imf_tables[0]
-    for table in imf_tables[1:]:
-        imf_merged = imf_merged.merge(table, on="country_code", how="outer")
-
-    imf_merged.to_csv("data/raw/imf_financial_access.csv", index=False)
-    print("  Saved imf_financial_access.csv —", len(imf_merged), "countries,",
-          imf_merged.shape[1], "columns")
+if os.path.exists("data/raw/imf_financial_access.csv"):
+    print("  imf_financial_access.csv already downloaded — reusing cached file.")
+    imf_merged = pd.read_csv("data/raw/imf_financial_access.csv")
 else:
-    print("  Could not get any IMF data — placeholder created")
-    pd.DataFrame(columns=["country_code", "bank_branches_per_100k"]).to_csv(
-        "data/raw/imf_financial_access.csv", index=False
-    )
+    # I'll collect each IMF/banking indicator here
+    imf_tables = []
+
+    # Indicator 1: Bank branches per 100,000 adults
+    print("  Fetching bank branches per 100,000 adults...")
+    branches_df = download_world_bank("FB.CBK.BRCH.P5", "bank_branches_per_100k", 2021)
+    if branches_df is not None and len(branches_df) > 0:
+        imf_tables.append(branches_df[["country_code", "bank_branches_per_100k"]])
+        print("    Got data for", len(branches_df), "countries")
+    time.sleep(0.5)
+
+    # Indicator 2: ATMs per 100,000 adults
+    print("  Fetching ATMs per 100,000 adults...")
+    atm_df = download_world_bank("FB.ATM.TOTL.P5", "atm_per_100k", 2021)
+    if atm_df is not None and len(atm_df) > 0:
+        imf_tables.append(atm_df[["country_code", "atm_per_100k"]])
+        print("    Got data for", len(atm_df), "countries")
+    time.sleep(0.5)
+
+    # Indicator 3: Domestic credit to private sector (% of GDP)
+    # This is my proxy for whether the financial system is ACTIVELY LENDING
+    # to businesses and farms. A country where banks barely lend (low %)
+    # means smallholder farmers cannot get the loans they need to invest
+    # in better inputs, storage, or post-harvest handling.
+    print("  Fetching domestic credit to private sector (% GDP)...")
+    credit_df = download_world_bank("FS.AST.PRVT.GD.ZS", "private_credit_pct_gdp", 2021)
+    if credit_df is not None and len(credit_df) > 0:
+        imf_tables.append(credit_df[["country_code", "private_credit_pct_gdp"]])
+        print("    Got data for", len(credit_df), "countries")
+    time.sleep(0.5)
+
+    # Indicator 4: Commercial bank deposits (% of GDP)
+    # Where bank branches exist, do people actually USE them to save?
+    print("  Fetching bank deposits as % of GDP...")
+    deposits_df = download_world_bank("FD.AST.PRVT.GD.ZS", "bank_deposits_pct_gdp", 2021)
+    if deposits_df is not None and len(deposits_df) > 0:
+        imf_tables.append(deposits_df[["country_code", "bank_deposits_pct_gdp"]])
+        print("    Got data for", len(deposits_df), "countries")
+    time.sleep(0.5)
+
+    # I merge all IMF/banking tables together
+    if len(imf_tables) > 0:
+        imf_merged = imf_tables[0]
+        for table in imf_tables[1:]:
+            imf_merged = imf_merged.merge(table, on="country_code", how="outer")
+
+        imf_merged.to_csv("data/raw/imf_financial_access.csv", index=False)
+        print("  Saved imf_financial_access.csv —", len(imf_merged), "countries,",
+              imf_merged.shape[1], "columns")
+    else:
+        print("  Could not get any IMF data — placeholder created")
+        pd.DataFrame(columns=["country_code", "bank_branches_per_100k"]).to_csv(
+            "data/raw/imf_financial_access.csv", index=False
+        )
 
 time.sleep(1)
 
@@ -595,72 +641,76 @@ WGI_INDICATORS["RQ.EST"] = "wgi_regulatory_quality"
 WGI_INDICATORS["RL.EST"] = "wgi_rule_of_law"
 WGI_INDICATORS["VA.EST"] = "wgi_voice_accountability"
 
-# I'll collect each WGI indicator table here
-wgi_tables = []
+if os.path.exists("data/raw/wgi_governance_2021.csv"):
+    print("  wgi_governance_2021.csv already downloaded — reusing cached file.")
+    wgi_merged = pd.read_csv("data/raw/wgi_governance_2021.csv")
+else:
+    # I'll collect each WGI indicator table here
+    wgi_tables = []
 
-# I try each WGI indicator one at a time
-for code in WGI_INDICATORS:
-    col_name = WGI_INDICATORS[code]
-    print("  Fetching", col_name, "...")
+    # I try each WGI indicator one at a time
+    for code in WGI_INDICATORS:
+        col_name = WGI_INDICATORS[code]
+        print("  Fetching", col_name, "...")
 
-    # I try with source=3 (WGI database source)
-    df = download_world_bank(code, col_name, year=2021, source=3)
+        # I try with source=3 (WGI database source)
+        df = download_world_bank(code, col_name, year=2021, source=3)
 
-    if df is not None and len(df) > 0:
-        wgi_tables.append(df[["country_code", col_name]])
-        print("    Got data for", len(df), "countries")
-    else:
-        # The WGI API often doesn't work via the standard endpoint
-        # I try without the source parameter as a backup
-        df = download_world_bank(code, col_name, year=2021)
         if df is not None and len(df) > 0:
             wgi_tables.append(df[["country_code", col_name]])
-            print("    Got data via fallback for", len(df), "countries")
+            print("    Got data for", len(df), "countries")
         else:
-            print("    No data for", col_name, "(API unavailable)")
+            # The WGI API often doesn't work via the standard endpoint
+            # I try without the source parameter as a backup
+            df = download_world_bank(code, col_name, year=2021)
+            if df is not None and len(df) > 0:
+                wgi_tables.append(df[["country_code", col_name]])
+                print("    Got data via fallback for", len(df), "countries")
+            else:
+                print("    No data for", col_name, "(API unavailable)")
 
-    time.sleep(0.5)
+        time.sleep(0.5)
 
-# I merge whatever WGI data I got
-if len(wgi_tables) > 0:
-    wgi_merged = wgi_tables[0]
-    for table in wgi_tables[1:]:
-        wgi_merged = wgi_merged.merge(table, on="country_code", how="outer")
+    # I merge whatever WGI data I got
+    if len(wgi_tables) > 0:
+        wgi_merged = wgi_tables[0]
+        for table in wgi_tables[1:]:
+            wgi_merged = wgi_merged.merge(table, on="country_code", how="outer")
 
-    wgi_merged.to_csv("data/raw/wgi_governance_2021.csv", index=False)
-    print("  Saved wgi_governance_2021.csv —", len(wgi_merged), "countries,",
-          wgi_merged.shape[1], "columns")
-else:
-    # The WGI API returned nothing — I create a placeholder and show clear instructions
-    print()
-    print("  WGI API returned no data. I need to download this manually.")
-    print("  Here is exactly what to do:")
-    print("  1. Go to: https://info.worldbank.org/governance/wgi/")
-    print("  2. Click 'Download the data'")
-    print("  3. Select: All Indicators, All Countries, Year = 2021")
-    print("  4. Download as CSV or Excel")
-    print("  5. Rename/save as: data/raw/wgi_governance_2021.csv")
-    print("  6. Make sure the file has these column names:")
-    print("       country_code, wgi_control_of_corruption,")
-    print("       wgi_government_effectiveness, wgi_political_stability,")
-    print("       wgi_regulatory_quality, wgi_rule_of_law, wgi_voice_accountability")
-    print()
-    print("  Creating a placeholder file so the pipeline does not crash...")
+        wgi_merged.to_csv("data/raw/wgi_governance_2021.csv", index=False)
+        print("  Saved wgi_governance_2021.csv —", len(wgi_merged), "countries,",
+              wgi_merged.shape[1], "columns")
+    else:
+        # The WGI API returned nothing — I create a placeholder and show clear instructions
+        print()
+        print("  WGI API returned no data. I need to download this manually.")
+        print("  Here is exactly what to do:")
+        print("  1. Go to: https://info.worldbank.org/governance/wgi/")
+        print("  2. Click 'Download the data'")
+        print("  3. Select: All Indicators, All Countries, Year = 2021")
+        print("  4. Download as CSV or Excel")
+        print("  5. Rename/save as: data/raw/wgi_governance_2021.csv")
+        print("  6. Make sure the file has these column names:")
+        print("       country_code, wgi_control_of_corruption,")
+        print("       wgi_government_effectiveness, wgi_political_stability,")
+        print("       wgi_regulatory_quality, wgi_rule_of_law, wgi_voice_accountability")
+        print()
+        print("  Creating a placeholder file so the pipeline does not crash...")
 
-    # I create a placeholder so Step 6 does not crash when looking for this file
-    wgi_placeholder_cols = [
-        "country_code",
-        "wgi_control_of_corruption",
-        "wgi_government_effectiveness",
-        "wgi_political_stability",
-        "wgi_regulatory_quality",
-        "wgi_rule_of_law",
-        "wgi_voice_accountability"
-    ]
-    pd.DataFrame(columns=wgi_placeholder_cols).to_csv(
-        "data/raw/wgi_governance_2021.csv", index=False
-    )
-    print("  Placeholder saved as data/raw/wgi_governance_2021.csv")
+        # I create a placeholder so Step 6 does not crash when looking for this file
+        wgi_placeholder_cols = [
+            "country_code",
+            "wgi_control_of_corruption",
+            "wgi_government_effectiveness",
+            "wgi_political_stability",
+            "wgi_regulatory_quality",
+            "wgi_rule_of_law",
+            "wgi_voice_accountability"
+        ]
+        pd.DataFrame(columns=wgi_placeholder_cols).to_csv(
+            "data/raw/wgi_governance_2021.csv", index=False
+        )
+        print("  Placeholder saved as data/raw/wgi_governance_2021.csv")
 
 
 # ============================================================

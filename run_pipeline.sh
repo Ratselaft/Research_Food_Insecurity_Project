@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # ─────────────────────────────────────────────────────────────────────────────
-# run_pipeline.sh — executes all ten steps in order
+# run_pipeline.sh — executes the ten main steps, plus three supplementary
+# scripts/ data-collection scripts (5b-5d) that step6 depends on but step5
+# alone doesn't produce (LPI, rural poverty, mobile access, APHLIS post-harvest
+# loss, WGI governance, trade % GDP).
 #
 # Each step feeds the next. The script stops immediately if any step fails
 # so you never silently run downstream steps on broken inputs.
@@ -31,6 +34,21 @@ python src/step4_score_and_filter_papers.py
 echo ""
 echo "── Step 5: Download country data ────────────────────"
 python src/step5_download_country_data.py
+
+echo ""
+echo "── Step 5b: Fetch additional country indicators ─────"
+echo "  (LPI, rural poverty, APHLIS post-harvest loss, mobile access)"
+python scripts/fetch_additional_country_indicators.py
+
+echo ""
+echo "── Step 5c: Mine post-harvest loss from all sources ─"
+echo "  (combines APHLIS + FAO FBS + sub-regional proxy into phl_combined.csv)"
+python scripts/mine_country_data_all_sources.py
+
+echo ""
+echo "── Step 5d: Fill data Step 5 could not download ─────"
+echo "  (WGI governance indicators, trade % GDP)"
+python scripts/fill_missing_country_data.py
 
 echo ""
 echo "── Step 6: Clean and combine data ───────────────────"
