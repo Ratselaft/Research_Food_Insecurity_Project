@@ -1,0 +1,71 @@
+e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  data/raw/.gitkeep
+c747f04775ef1164816c67526b3467404cf96c9b2d51b7e2b26b9d00e95b3148  data/raw/Peer Review/40572_2026_Article_528.pdf
+fc35c5ec546a9ab471c1858213754b8965dd1f36a1e86b93870db761185a9038  data/raw/Peer Review/A-comprehensive-review-of-protein-sources-functional-additives-and-technological-advances-in-plantbased-meat-analogue-formulations_2026_Springer-Nature (1).pdf
+fc35c5ec546a9ab471c1858213754b8965dd1f36a1e86b93870db761185a9038  data/raw/Peer Review/A-comprehensive-review-of-protein-sources-functional-additives-and-technological-advances-in-plantbased-meat-analogue-formulations_2026_Springer-Nature.pdf
+406e37ff674fbc40310c2c94c9e4e07a290b160ea731d571ee08f53844c9ecde  data/raw/Peer Review/A-conserved-Lsm8exosome-module-maintains-RNA-splicing-fidelity-to-control-fungal-stress-adaptation-and-virulence_2026_Springer (1).pdf
+406e37ff674fbc40310c2c94c9e4e07a290b160ea731d571ee08f53844c9ecde  data/raw/Peer Review/A-conserved-Lsm8exosome-module-maintains-RNA-splicing-fidelity-to-control-fungal-stress-adaptation-and-virulence_2026_Springer.pdf
+86096a011b424a308dd5077d71aca79b4ff79707c9639f1cb0976d158179a456  data/raw/Peer Review/Climate-change-spatial-spillovers-and-sustainable-productivity-of-Teff-Maize-and-wheat-across-Ethiopian-districts-using-integrated-climate-and-agricultural-data-from-2000-to-2024_2026_Springer-Nature (1).pdf
+86096a011b424a308dd5077d71aca79b4ff79707c9639f1cb0976d158179a456  data/raw/Peer Review/Climate-change-spatial-spillovers-and-sustainable-productivity-of-Teff-Maize-and-wheat-across-Ethiopian-districts-using-integrated-climate-and-agricultural-data-from-2000-to-2024_2026_Springer-Nature.pdf
+1b5b56e3f0f86c361ab79c7204bd05cd5bef23d9c0820cbdd3fadeeec74cef18  data/raw/Peer Review/Deep-learning-framework-using-UAV-imagery-for-multidisease-detection-in-cereal-crops_2026_Nature-Research (1).pdf
+1b5b56e3f0f86c361ab79c7204bd05cd5bef23d9c0820cbdd3fadeeec74cef18  data/raw/Peer Review/Deep-learning-framework-using-UAV-imagery-for-multidisease-detection-in-cereal-crops_2026_Nature-Research.pdf
+8f15a83a85c266be40e62a721ccd00da629b69040c1bf8d2e1fab7290b2d7372  data/raw/Peer Review/Drivers and nutritional losses associated with post-harvest loss of fruits and vegetables in Ghana- a cross-sector analysis.pdf
+8f15a83a85c266be40e62a721ccd00da629b69040c1bf8d2e1fab7290b2d7372  data/raw/Peer Review/Drivers-and-nutritional-losses-associated-with-postharvest-loss-of-fruits-and-vegetables-in-Ghana-a-crosssector-analysis_2026_BioMed-Central-Ltd (1).pdf
+8f15a83a85c266be40e62a721ccd00da629b69040c1bf8d2e1fab7290b2d7372  data/raw/Peer Review/Drivers-and-nutritional-losses-associated-with-postharvest-loss-of-fruits-and-vegetables-in-Ghana-a-crosssector-analysis_2026_BioMed-Central-Ltd.pdf
+ed421ee844fb6b2819b12add9e6c288d74e264ddc03ec0b61e8659280d685e80  data/raw/Peer Review/Ecological-drivers-of-intercropping-performance-for-enhanced-global-crop-production_2026_Springer-Nature (1).pdf
+ed421ee844fb6b2819b12add9e6c288d74e264ddc03ec0b61e8659280d685e80  data/raw/Peer Review/Ecological-drivers-of-intercropping-performance-for-enhanced-global-crop-production_2026_Springer-Nature.pdf
+324b0ac4d65cd07343d9a2045fb28ae46351cdc5864d6ba9e1ba8b504dd0c7eb  data/raw/Peer Review/Effects-of-legumebased-rotation-on-subsequent-sorghum-rhizosphere-microbial-communities-and-their-drought-tolerancerelated-genes_2026_BioMed-Central-Ltd (1).pdf
+324b0ac4d65cd07343d9a2045fb28ae46351cdc5864d6ba9e1ba8b504dd0c7eb  data/raw/Peer Review/Effects-of-legumebased-rotation-on-subsequent-sorghum-rhizosphere-microbial-communities-and-their-drought-tolerancerelated-genes_2026_BioMed-Central-Ltd.pdf
+3892ad523c10f6c1809eedb3e6195563c12635c24aed17e6de5242568976640d  data/raw/Peer Review/Fonio-culinology-A-systematic-review-of-Fonios-culinary-applications_2026_Malque-Publishing (1).pdf
+3892ad523c10f6c1809eedb3e6195563c12635c24aed17e6de5242568976640d  data/raw/Peer Review/Fonio-culinology-A-systematic-review-of-Fonios-culinary-applications_2026_Malque-Publishing.pdf
+166e046cca4a0db194c5aeb26ca31d0e2316cb657132f3ae1c55edca12197d47  data/raw/Peer Review/Food insecurity among wastepicking children in Iran and its associated factors.pdf
+c747f04775ef1164816c67526b3467404cf96c9b2d51b7e2b26b9d00e95b3148  data/raw/Peer Review/Food-Security-Outlook-for-Eastern-Africa-by-2050-Climate-Change-Impacts-and-PopulationDriven-Demand-Gaps_2026_Springer-Science-and-Business-Media-Deutschland-GmbH (1).pdf
+c747f04775ef1164816c67526b3467404cf96c9b2d51b7e2b26b9d00e95b3148  data/raw/Peer Review/Food-Security-Outlook-for-Eastern-Africa-by-2050-Climate-Change-Impacts-and-PopulationDriven-Demand-Gaps_2026_Springer-Science-and-Business-Media-Deutschland-GmbH.pdf
+522b7c72aa1b5bab858ee9d16051589ad6ad8a2c35d023cc69a295256880246f  data/raw/Peer Review/Genomewide-association-analysis-reveals-natural-genetic-variations-controlling-canopy-architecture-traits-in-bread-wheat_2026_Nature-Research (1).pdf
+522b7c72aa1b5bab858ee9d16051589ad6ad8a2c35d023cc69a295256880246f  data/raw/Peer Review/Genomewide-association-analysis-reveals-natural-genetic-variations-controlling-canopy-architecture-traits-in-bread-wheat_2026_Nature-Research.pdf
+3f085ec3c353686521407ee55ea9f33ef17aacb8466f1f81df3fb3ab0571205e  data/raw/Peer Review/Household food insecurity and its associated factors in Ethiopia- a systematic review and meta-analysis.pdf
+88c016f4f24cc9f32c5483acb1c52eedaa061240aafb94610944ea3732549d2e  data/raw/Peer Review/Little-millet-genome-reveals-evolutionary-insights-into-tetraploid-structure-and-genetic-basis-of-micronutrient-density_2026_Nature-Research (1).pdf
+88c016f4f24cc9f32c5483acb1c52eedaa061240aafb94610944ea3732549d2e  data/raw/Peer Review/Little-millet-genome-reveals-evolutionary-insights-into-tetraploid-structure-and-genetic-basis-of-micronutrient-density_2026_Nature-Research.pdf
+cc52b9cbfb7171a6839ba1d376da5ee4cc3281a546dd98f9a496504f1ed33b9a  data/raw/Peer Review/Prevalence and risk factors for food insecurity among a cross-sectional sample of U.S. Army Reserve component soldiers, 2021.pdf
+15901fe1754743351305a701920e84ccd24fc197e6be5babe0f9c6141361a088  data/raw/Peer Review/Reimagining-Israels-food-system-balancing-mediterranean-diet-recommendations-with-national-food-security-sovereignty-and-resilience_2026_BioMed-Central-Ltd (1).pdf
+15901fe1754743351305a701920e84ccd24fc197e6be5babe0f9c6141361a088  data/raw/Peer Review/Reimagining-Israels-food-system-balancing-mediterranean-diet-recommendations-with-national-food-security-sovereignty-and-resilience_2026_BioMed-Central-Ltd.pdf
+b448889622b497613bfc073ceca98a95fc18b3f0a3c5250edc4dd38bfa444c06  data/raw/Peer Review/Spatial-interdependencies-and-agricultural-landuse-transitions-in-Mexico-a-shiftshare-decomposition-20032023_2026_Springer-Science-and-Business-Media-Deutschland-GmbH (1).pdf
+b448889622b497613bfc073ceca98a95fc18b3f0a3c5250edc4dd38bfa444c06  data/raw/Peer Review/Spatial-interdependencies-and-agricultural-landuse-transitions-in-Mexico-a-shiftshare-decomposition-20032023_2026_Springer-Science-and-Business-Media-Deutschland-GmbH.pdf
+46bf3a316b54fd289e219bc26e32d0a431e4080223dd2e24eb6ff857dcdf5dc1  data/raw/Peer Review/Sustainable-development-of-passive-pot-in-pot-cooling-systems-using-locally-available-packing-materials_2026_Discover (1).pdf
+46bf3a316b54fd289e219bc26e32d0a431e4080223dd2e24eb6ff857dcdf5dc1  data/raw/Peer Review/Sustainable-development-of-passive-pot-in-pot-cooling-systems-using-locally-available-packing-materials_2026_Discover.pdf
+3bd61c0140a4e493d197cc32331cfd53a8f831013ff291487a94f170b88b2dec  data/raw/Peer Review/Sustainable-strategies-for-durum-wheat-production-under-water-scarcity-and-climate-stress_2026_GJESM-Publication (1).pdf
+3bd61c0140a4e493d197cc32331cfd53a8f831013ff291487a94f170b88b2dec  data/raw/Peer Review/Sustainable-strategies-for-durum-wheat-production-under-water-scarcity-and-climate-stress_2026_GJESM-Publication.pdf
+526eb88b77076d11877bf994db5b9202727dd3ed58feb47e2559e5af07552035  data/raw/Peer Review/The effect of climate change on food security in ethiopia using auto-regressive distributed lag model.pdf
+526eb88b77076d11877bf994db5b9202727dd3ed58feb47e2559e5af07552035  data/raw/Peer Review/The-effect-of-climate-change-on-food-security-in-ethiopia-using-autoregressive-distributed-lag-model_2026_Springer-Nature (1).pdf
+526eb88b77076d11877bf994db5b9202727dd3ed58feb47e2559e5af07552035  data/raw/Peer Review/The-effect-of-climate-change-on-food-security-in-ethiopia-using-autoregressive-distributed-lag-model_2026_Springer-Nature.pdf
+113cd4216871c2977aa33c789071c0609b17671a27da86829e917613f978b5aa  data/raw/Peer Review/Understanding-dried-marine-small-fish-losses-in-the-regional-supply-chain-of-Tanzania_2026_Springer-Nature (1).pdf
+113cd4216871c2977aa33c789071c0609b17671a27da86829e917613f978b5aa  data/raw/Peer Review/Understanding-dried-marine-small-fish-losses-in-the-regional-supply-chain-of-Tanzania_2026_Springer-Nature.pdf
+5f027f020e353f328bfe38de41a38a8ef4ea7e6573b36b1ffe277031157773d2  data/raw/Peer Review/Wheat-transcriptome-changes-in-response-to-the-black-stem-rust-pathogen-Puccinia-graminis-f-sp-tritici_2026_BioMed-Central-Ltd (1).pdf
+5f027f020e353f328bfe38de41a38a8ef4ea7e6573b36b1ffe277031157773d2  data/raw/Peer Review/Wheat-transcriptome-changes-in-response-to-the-black-stem-rust-pathogen-Puccinia-graminis-f-sp-tritici_2026_BioMed-Central-Ltd.pdf
+0243fc9b149e4e65d9c00138bc055987caca8e09eb5ed919c59e5a036a62ae77  data/raw/Peer Review/You-Only-Grasp-Once-HumanInspired-Benign-Grasping-for-Agricultural-Products_2026_Springer-Nature (1).pdf
+0243fc9b149e4e65d9c00138bc055987caca8e09eb5ed919c59e5a036a62ae77  data/raw/Peer Review/You-Only-Grasp-Once-HumanInspired-Benign-Grasping-for-Agricultural-Products_2026_Springer-Nature.pdf
+f4792ab3d2941a85ce18007dc0a001ec93ccfec8fb396931a5d47215bfa64f58  data/raw/Peer Review/document.pdf
+43f1eb5e985af5f537ad8b8c6e0d260a8f12e5ad64ad5eb92416f4c292145d4e  data/raw/aphlis_by_crop.csv
+97ff34b8f6fd521dc89993bc0397a4c7e46f7d504ccc50108b33d56711cdbbef  data/raw/aphlis_country_losses.csv
+8d1ad12f149acc13fd2b37ac843658117ba3b66fc9f47796d9fa40e6827e362a  data/raw/aphlis_phl_africa.csv
+c256ce98ee6422e22292d8bc6851517a9aca1ce4b48829df4572d46fc9242b9d  data/raw/cereal_availability_2021.csv
+43d3aabebd2c88b9b0a350eac17ebf503f4b263056243ab43dbe5200a8c763bc  data/raw/corpus_metadata.csv
+290fad31f056a9cfc5e85d7270a191c53af23918d9bfa033d4c8f7838af04dbc  data/raw/corpus_metadata_full_backup.csv
+7ae50da387ac175e68f68d15282346766ed2a4d7d91dc1b7c53b4f7a00ad99f0  data/raw/fao_fflw_losses.csv
+d2dd631ca174c09bb38e76df9052ac115a7d900ee5cbe1be3445cf83edc241d8  data/raw/fao_flw_losses.csv
+f5877b67c90f0e3b0839674599cbaa5392451001bf5dc754f22048999fc137eb  data/raw/fao_flw_losses.csv.csv
+4ccb3add0c2d3fac07da339c372d259b8b59b794d37b6f73031ffc9f28fa4f24  data/raw/fbs_cereal_losses.csv
+f761f1bb3a8dde6939b9f13e2c8ea35f36d7fc7b468aee3c2a6682534d89e761  data/raw/findex_2021.csv
+afd0e1367aaa7289ae24bea30ff2dd2e91d98446df73e2643fa42f47d5cbd56d  data/raw/findex_mobile_money.csv
+2a90659f67bc57a9e00fd2653230bede48a171a096d203d486fc9d57eed55dbb  data/raw/imf_financial_access.csv
+099ed1bc55140e50d37d8049a53970225a91df4fb7c9028222c2871a8a1b4270  data/raw/lpi.csv
+58f88a27becc3a388e4d6846a11412cc98626878ee36de88a831f195fb81bde0  data/raw/mobile_financial_access.csv
+454c62b5e040c271e6dbf7aaf5838017425456f18e7445e62acd555cdccbee6d  data/raw/phl_combined.csv
+2e4c65ca3fd0e3be182d4a9a26c9dbacbb0feaa9dade8b3b3452fc95a8f93cf8  data/raw/rural_poverty.csv
+7f798aadc232ced7fa8860f70d3871c729960c5864c0830bb36f1fe8db5bd7f5  data/raw/scopus_export.csv
+53d3358988ba38a7ba894ae99dd7980c6d5c238eb2520b8e7f2e4e5d20338281  data/raw/scopus_export_2.csv
+1ff0994d2a515434cb74c6e5f1e33f0497ce92bb1cf1c7252fd201d3414eda04  data/raw/scopus_export_3.csv
+909388b94249e40e0518e5dca19123f798640443e46eeedd39891d6243581229  data/raw/trade_pct_gdp.csv
+7c50198b483c568f2a44dd22ba8d3669daf004232f9c8542bf4416a81a0a0a61  data/raw/undernourishment_2021.csv
+82757dc1fffbce0a024d493d8e7527b0c36466cb5863100aa17b6c340b160df1  data/raw/wgi_governance_2021.csv
+45f41865adec4f86602c2cd05c0e29cd8b437614bf2f5b5a863d12463202cae4  data/raw/world_countries.geojson
+c2010dd038824ec0d07f83dd77a623b62e2fb52a8b27046d36edf49bd81b017d  data/raw/worldbank_wdi_2021.csv
