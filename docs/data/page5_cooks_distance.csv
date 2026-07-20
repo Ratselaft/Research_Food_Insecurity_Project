@@ -1,0 +1,158 @@
+ISO3 Code,Country,Cooks D,Threshold,Flagged
+COD,"Congo, Dem. Rep.",0.1526,0.0255,Yes
+CPV,Cabo Verde,0.12,0.0255,Yes
+MMR,Myanmar,0.1091,0.0255,Yes
+PNG,Papua New Guinea,0.0915,0.0255,Yes
+RWA,Rwanda,0.0692,0.0255,Yes
+BTN,Bhutan,0.0557,0.0255,Yes
+HKG,"Hong Kong SAR, China",0.0405,0.0255,Yes
+COG,"Congo, Rep.",0.0379,0.0255,Yes
+SAU,Saudi Arabia,0.022,0.0255,No
+VCT,St. Vincent and the Grenadines,0.0217,0.0255,No
+LAO,Lao PDR,0.0194,0.0255,No
+AGO,Angola,0.019,0.0255,No
+TLS,Timor-Leste,0.0175,0.0255,No
+QAT,Qatar,0.015,0.0255,No
+EGY,"Egypt, Arab Rep.",0.0149,0.0255,No
+ETH,Ethiopia,0.0143,0.0255,No
+LKA,Sri Lanka,0.0126,0.0255,No
+KGZ,Kyrgyz Republic,0.0124,0.0255,No
+BGD,Bangladesh,0.0122,0.0255,No
+SLB,Solomon Islands,0.0119,0.0255,No
+PHL,Philippines,0.0118,0.0255,No
+DZA,Algeria,0.0112,0.0255,No
+SRB,Serbia,0.0106,0.0255,No
+UGA,Uganda,0.0089,0.0255,No
+OMN,Oman,0.0087,0.0255,No
+CHN,China,0.0083,0.0255,No
+CZE,Czechia,0.008,0.0255,No
+GNB,Guinea-Bissau,0.0079,0.0255,No
+MRT,Mauritania,0.0079,0.0255,No
+BHS,"Bahamas, The",0.0078,0.0255,No
+AZE,Azerbaijan,0.0078,0.0255,No
+AFG,Afghanistan,0.0075,0.0255,No
+EST,Estonia,0.0074,0.0255,No
+KWT,Kuwait,0.0071,0.0255,No
+BFA,Burkina Faso,0.007,0.0255,No
+TUR,Turkiye,0.0068,0.0255,No
+MAR,Morocco,0.0059,0.0255,No
+MWI,Malawi,0.0058,0.0255,No
+UKR,Ukraine,0.0058,0.0255,No
+GMB,"Gambia, The",0.0056,0.0255,No
+TUN,Tunisia,0.0055,0.0255,No
+JOR,Jordan,0.0054,0.0255,No
+COL,Colombia,0.0054,0.0255,No
+IRQ,Iraq,0.005,0.0255,No
+BLR,Belarus,0.0049,0.0255,No
+GEO,Georgia,0.0049,0.0255,No
+TJK,Tajikistan,0.0047,0.0255,No
+NER,Niger,0.0043,0.0255,No
+VNM,Viet Nam,0.0043,0.0255,No
+NPL,Nepal,0.004,0.0255,No
+GUY,Guyana,0.0039,0.0255,No
+THA,Thailand,0.0039,0.0255,No
+ALB,Albania,0.0034,0.0255,No
+MOZ,Mozambique,0.0033,0.0255,No
+SEN,Senegal,0.0033,0.0255,No
+STP,Sao Tome and Principe,0.0033,0.0255,No
+MDG,Madagascar,0.0032,0.0255,No
+BIH,Bosnia and Herzegovina,0.0032,0.0255,No
+SVK,Slovak Republic,0.0031,0.0255,No
+ZMB,Zambia,0.003,0.0255,No
+JAM,Jamaica,0.003,0.0255,No
+ESP,Spain,0.0029,0.0255,No
+ROU,Romania,0.0029,0.0255,No
+LBY,Libya,0.0027,0.0255,No
+AUS,Australia,0.0027,0.0255,No
+DOM,Dominican Republic,0.0027,0.0255,No
+BEL,Belgium,0.0026,0.0255,No
+CRI,Costa Rica,0.0026,0.0255,No
+IRN,"Iran, Islamic Rep.",0.0025,0.0255,No
+ISR,Israel,0.0025,0.0255,No
+NOR,Norway,0.0024,0.0255,No
+KAZ,Kazakhstan,0.0024,0.0255,No
+BWA,Botswana,0.0023,0.0255,No
+KHM,Cambodia,0.0023,0.0255,No
+TTO,Trinidad and Tobago,0.0022,0.0255,No
+ISL,Iceland,0.0022,0.0255,No
+BRA,Brazil,0.0021,0.0255,No
+BLZ,Belize,0.0021,0.0255,No
+DEU,Germany,0.002,0.0255,No
+GHA,Ghana,0.002,0.0255,No
+DNK,Denmark,0.002,0.0255,No
+PAK,Pakistan,0.0019,0.0255,No
+FJI,Fiji,0.0019,0.0255,No
+HUN,Hungary,0.0018,0.0255,No
+KEN,Kenya,0.0018,0.0255,No
+MUS,Mauritius,0.0018,0.0255,No
+NLD,Netherlands,0.0017,0.0255,No
+NGA,Nigeria,0.0017,0.0255,No
+LVA,Latvia,0.0015,0.0255,No
+SLV,El Salvador,0.0015,0.0255,No
+ARE,United Arab Emirates,0.0015,0.0255,No
+TZA,Tanzania,0.0013,0.0255,No
+SLE,Sierra Leone,0.0013,0.0255,No
+MEX,Mexico,0.0013,0.0255,No
+COM,Comoros,0.0013,0.0255,No
+ZWE,Zimbabwe,0.0012,0.0255,No
+HRV,Croatia,0.0012,0.0255,No
+GIN,Guinea,0.0012,0.0255,No
+DJI,Djibouti,0.0011,0.0255,No
+VEN,"Venezuela, RB",0.0011,0.0255,No
+HND,Honduras,0.0011,0.0255,No
+RUS,Russian Federation,0.001,0.0255,No
+ECU,Ecuador,0.0009,0.0255,No
+IRL,Ireland,0.0009,0.0255,No
+KOR,"Korea, Rep.",0.0008,0.0255,No
+SUR,Suriname,0.0008,0.0255,No
+LUX,Luxembourg,0.0007,0.0255,No
+FIN,Finland,0.0007,0.0255,No
+GAB,Gabon,0.0007,0.0255,No
+LBR,Liberia,0.0007,0.0255,No
+GRC,Greece,0.0007,0.0255,No
+CAN,Canada,0.0006,0.0255,No
+TKM,Turkmenistan,0.0006,0.0255,No
+MYS,Malaysia,0.0006,0.0255,No
+LBN,Lebanon,0.0006,0.0255,No
+VUT,Vanuatu,0.0006,0.0255,No
+ITA,Italy,0.0006,0.0255,No
+PAN,Panama,0.0005,0.0255,No
+MDA,Moldova,0.0005,0.0255,No
+URY,Uruguay,0.0005,0.0255,No
+NZL,New Zealand,0.0005,0.0255,No
+SVN,Slovenia,0.0005,0.0255,No
+CHL,Chile,0.0005,0.0255,No
+NAM,Namibia,0.0005,0.0255,No
+USA,United States,0.0004,0.0255,No
+BGR,Bulgaria,0.0004,0.0255,No
+HTI,Haiti,0.0003,0.0255,No
+BRB,Barbados,0.0003,0.0255,No
+LSO,Lesotho,0.0003,0.0255,No
+CIV,Cote d'Ivoire,0.0002,0.0255,No
+NIC,Nicaragua,0.0002,0.0255,No
+UZB,Uzbekistan,0.0002,0.0255,No
+GTM,Guatemala,0.0002,0.0255,No
+PRY,Paraguay,0.0002,0.0255,No
+PRT,Portugal,0.0002,0.0255,No
+CMR,Cameroon,0.0002,0.0255,No
+CHE,Switzerland,0.0001,0.0255,No
+BOL,Bolivia,0.0001,0.0255,No
+MNE,Montenegro,0.0001,0.0255,No
+CYP,Cyprus,0.0001,0.0255,No
+MNG,Mongolia,0.0001,0.0255,No
+MKD,North Macedonia,0.0001,0.0255,No
+MDV,Maldives,0.0001,0.0255,No
+IND,India,0.0001,0.0255,No
+SWE,Sweden,0.0001,0.0255,No
+GBR,United Kingdom,0.0001,0.0255,No
+FRA,France,0.0,0.0255,No
+POL,Poland,0.0,0.0255,No
+IDN,Indonesia,0.0,0.0255,No
+PER,Peru,0.0,0.0255,No
+SYR,Syrian Arab Republic,0.0,0.0255,No
+LTU,Lithuania,0.0,0.0255,No
+AUT,Austria,0.0,0.0255,No
+ARM,Armenia,0.0,0.0255,No
+SWZ,Eswatini,0.0,0.0255,No
+ZAF,South Africa,0.0,0.0255,No
+ARG,Argentina,0.0,0.0255,No

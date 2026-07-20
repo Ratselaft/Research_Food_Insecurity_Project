@@ -62,7 +62,12 @@ data/processed/           ← cleaned/merged files used by models
 outputs/tables/           ← CSV and TXT model results
 outputs/figures/          ← PNG charts (dpi=300 for print quality)
 outputs/narrative/        ← step9_synthesis.txt narrative report
-outputs/dashboard/        ← JSON/CSV exports for the dashboard
+outputs/powerbi/          ← CSV exports for dashboard.py (Streamlit) and docs/ (web)
+
+docs/                     ← static web dashboard (same 5 pages as dashboard.py),
+                            hosted free on GitHub Pages — see docs/README.md.
+                            docs/data/*.csv is kept in sync with outputs/powerbi/
+                            automatically by step10_export_for_dashboard.py.
 ```
 
 ---

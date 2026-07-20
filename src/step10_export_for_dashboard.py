@@ -17,6 +17,7 @@
 # ============================================================
 
 import os
+import shutil
 import numpy as np
 import pandas as pd
 
@@ -477,3 +478,22 @@ TO BUILD IN POWER BI:
   6. Table visual: page3_nlp_synthesis.csv — conditional formatting on p-value
   7. Word cloud (custom visual): page2_tfidf_keywords.csv
 """)
+
+# ============================================================
+# Keep the live web dashboard (docs/) in sync automatically.
+# docs/ is served as a static site via GitHub Pages — it reads
+# these same CSVs from docs/data/, so every pipeline run that
+# regenerates outputs/powerbi/ also refreshes the public site.
+# ============================================================
+DOCS_DATA_DIR = "docs/data"
+if os.path.isdir("docs"):
+    os.makedirs(DOCS_DATA_DIR, exist_ok=True)
+    copied = 0
+    for filename in os.listdir("outputs/powerbi"):
+        if filename.endswith(".csv"):
+            shutil.copyfile(
+                os.path.join("outputs/powerbi", filename),
+                os.path.join(DOCS_DATA_DIR, filename),
+            )
+            copied += 1
+    print(f"Synced {copied} CSV files to {DOCS_DATA_DIR}/ for the live web dashboard.")

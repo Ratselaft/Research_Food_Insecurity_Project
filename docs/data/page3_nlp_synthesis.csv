@@ -1,0 +1,6 @@
+NLP Theme,Model F Variable,OLS Coefficient,p-value,Significance,Direction
+Post-harvest cereal loss,cereal_loss_pct,0.0044,0.639,n.s.,Positive
+Market integration / value-chain proxy,trade_pct_gdp,-0.041,0.34,n.s.,Negative
+Rural electricity for storage/processing,rural_electricity_access_pct,0.0043,0.012,**,Positive
+Fertiliser efficiency,fertiliser_efficiency,0.0889,0.358,n.s.,Positive
+Food price inflation,food_price_inflation_pct,-0.0007,0.31,n.s.,Negative
